@@ -1,4 +1,4 @@
-import { Card, Skeleton, Divider } from '@heroui/react';
+import { Card, Skeleton, Separator } from '@heroui/react';
 import { useI18n } from '../i18n';
 
 const fmt = (n) => `${Number(n || 0).toLocaleString('en-EG')} EGP`;
@@ -46,14 +46,14 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
           <Row key={name} indent label={`${name} (${data.sessions})`} value={fmt(data.revenue)} />
         ))}
 
-        <Divider className="my-2" />
+        <Separator className="my-2" />
 
         <Row label={t('reports.expenses2')} value={fmt(totalExpenses)} bold />
         {Object.entries(byCategory).map(([cat, total]) => (
           <Row key={cat} indent label={cat} value={fmt(total)} />
         ))}
 
-        <Divider className="my-2" />
+        <Separator className="my-2" />
 
         <Row
           label={t('reports.netIncome')}

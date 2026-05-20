@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Input, Button, Divider, Spinner } from '@heroui/react';
+import { Card, Input, Button, Separator, Spinner } from '@heroui/react';
 import { updatePassword } from '../api';
 import { hashPassword, getAdminUsername } from '../auth';
 import { useI18n } from '../i18n';
@@ -20,7 +20,7 @@ function Section({ title, children }) {
     <Card>
       <Card.Content className="flex flex-col gap-4 p-5">
         <p className="text-base font-semibold text-default-800">{title}</p>
-        <Divider />
+        <Separator />
         {children}
       </Card.Content>
     </Card>

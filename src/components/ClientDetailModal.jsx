@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Chip, Divider, Modal, Spinner, TextArea } from '@heroui/react';
+import { Button, Chip, Separator, Modal, Spinner, TextArea } from '@heroui/react';
 import { useI18n } from '../i18n';
 import DataTable from './DataTable';
 
@@ -57,14 +57,14 @@ export default function ClientDetailModal({ client, isOpen, onClose }) {
               ))}
             </div>
 
-            <Divider />
+            <Separator />
 
             <div>
               <p className="text-sm font-semibold text-default-700 mb-2">{t('clients.sessionHistory')}</p>
               <DataTable columns={SESSION_COLS} data={client.sessions ?? []} loading={false} emptyMessage={t('general.noResults')} />
             </div>
 
-            <Divider />
+            <Separator />
 
             <div>
               <p className="text-sm font-semibold text-default-700 mb-2">{t('clients.notes')}</p>

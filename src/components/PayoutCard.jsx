@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Button, Chip, Divider } from '@heroui/react';
+import { Card, Button, Chip, Separator } from '@heroui/react';
 import { markPayoutPaid } from '../api';
 import { useI18n } from '../i18n';
 import ConfirmModal from './ConfirmModal';
@@ -72,7 +72,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
 
           {expanded && (payout.sessions?.length ?? 0) > 0 && (
             <>
-              <Divider />
+              <Separator />
               <ul className="flex flex-col gap-1">
                 {payout.sessions.map((s, i) => (
                   <li key={i} className="flex justify-between text-xs text-default-600 py-0.5">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Chip, Label, ListBox, Select } from '@heroui/react';
+import { Button, Chip } from '@heroui/react';
 import { getSessions, getTherapistsFull } from '../api';
 import { buildSessionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
