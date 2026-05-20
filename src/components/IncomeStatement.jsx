@@ -1,4 +1,4 @@
-import { Card, CardBody, Skeleton, Divider } from '@heroui/react';
+import { Card, Skeleton, Divider } from '@heroui/react';
 import { useI18n } from '../i18n';
 
 const fmt = (n) => `${Number(n || 0).toLocaleString('en-EG')} EGP`;
@@ -22,7 +22,6 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
   const totalExpenses = Number(d.totalExpenses || 0);
   const netIncome     = totalRevenue - totalExpenses;
 
-  // Revenue breakdown by therapist
   const byTherapist = {};
   (sessions || []).forEach((s) => {
     const name = s.Therapist_Name || '—';
@@ -31,7 +30,6 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
     byTherapist[name].revenue += Number(s.Revenue_Center || 0);
   });
 
-  // Expense breakdown by category
   const byCategory = {};
   (expenses || []).forEach((e) => {
     const cat = e.Category || 'Other';
@@ -40,10 +38,9 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
 
   return (
     <Card>
-      <CardBody className="p-5 gap-1">
+      <Card.Content className="p-5 gap-1">
         <p className="text-base font-semibold text-default-800 mb-2">{t('reports.incomeStatement')}</p>
 
-        {/* Revenue */}
         <Row label={t('reports.revenue')} value={fmt(totalRevenue)} bold />
         {Object.entries(byTherapist).map(([name, data]) => (
           <Row key={name} indent label={`${name} (${data.sessions})`} value={fmt(data.revenue)} />
@@ -51,7 +48,6 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
 
         <Divider className="my-2" />
 
-        {/* Expenses */}
         <Row label={t('reports.expenses2')} value={fmt(totalExpenses)} bold />
         {Object.entries(byCategory).map(([cat, total]) => (
           <Row key={cat} indent label={cat} value={fmt(total)} />
@@ -59,14 +55,13 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
 
         <Divider className="my-2" />
 
-        {/* Net */}
         <Row
           label={t('reports.netIncome')}
           value={fmt(Math.abs(netIncome))}
           bold
           color={netIncome >= 0 ? 'text-success' : 'text-danger'}
         />
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }

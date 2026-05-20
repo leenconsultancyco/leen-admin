@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardBody, Skeleton } from '@heroui/react';
+import { Card, Skeleton } from '@heroui/react';
 import { getDashboardData } from '../api';
 import { useI18n } from '../i18n';
 import StatCard from '../components/StatCard';
@@ -41,7 +41,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
       <OfflineBanner />
-      {/* Backup warning */}
+
       {!loading && stale && (
         <div className="bg-warning-50 border border-warning-200 rounded-xl px-4 py-3 text-sm text-warning-700 flex items-center justify-between gap-3">
           <span>⚠️ {t('dashboard.backupWarning')}</span>
@@ -49,21 +49,19 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Stat cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
         ) : (
           <>
             <StatCard icon="📅" label={t('dashboard.todaySessions')}  value={d.todaySessions  ?? 0} color="default" />
-            <StatCard icon="💵" label={t('dashboard.todayRevenue')}   value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`}  color="success" />
-            <StatCard icon="📈" label={t('dashboard.monthlyRevenue')} value={`${Number(d.totalRevenue  ?? 0).toLocaleString('en-EG')} EGP`}  color="primary" />
+            <StatCard icon="💵" label={t('dashboard.todayRevenue')}   value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="success" />
+            <StatCard icon="📈" label={t('dashboard.monthlyRevenue')} value={`${Number(d.totalRevenue ?? 0).toLocaleString('en-EG')} EGP`}  color="primary" />
             <StatCard icon="🔔" label={t('dashboard.pendingBookings')} value={d.pendingCount ?? 0} color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'} />
           </>
         )}
       </div>
 
-      {/* Pending bookings */}
       {pending.length > 0 && (
         <section>
           <h2 className="text-base font-semibold text-default-700 mb-3">
@@ -77,17 +75,15 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* Revenue chart */}
       <Card>
-        <CardBody className="p-4 gap-3">
+        <Card.Content className="p-4 gap-3">
           <h2 className="text-base font-semibold text-default-700">{t('dashboard.monthlyRevenue')}</h2>
           <RevenueChart data={d.monthlyChart ?? []} loading={loading} />
-        </CardBody>
+        </Card.Content>
       </Card>
 
-      {/* Recent activity */}
       <Card>
-        <CardBody className="p-4 gap-3">
+        <Card.Content className="p-4 gap-3">
           <h2 className="text-base font-semibold text-default-700">{t('dashboard.recentActivity')}</h2>
           {loading ? (
             <Skeleton className="h-32 rounded-lg" />
@@ -104,7 +100,7 @@ export default function Dashboard() {
               ))}
             </ul>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardBody, Button, Chip, Divider } from '@heroui/react';
+import { Card, Button, Chip, Divider } from '@heroui/react';
 import { markPayoutPaid } from '../api';
 import { useI18n } from '../i18n';
 import ConfirmModal from './ConfirmModal';
@@ -17,9 +17,9 @@ const fmt = (n) => `${Number(n || 0).toLocaleString('en-EG')} EGP`;
 
 export default function PayoutCard({ payout, month, year, onDone }) {
   const { t } = useI18n();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded]     = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]         = useState(false);
 
   const pending = Number(payout.pending || 0);
 
@@ -33,20 +33,16 @@ export default function PayoutCard({ payout, month, year, onDone }) {
   return (
     <>
       <Card className={pending > 0 ? 'border border-warning-200' : ''}>
-        <CardBody className="gap-3 p-4">
-          {/* Header row */}
+        <Card.Content className="gap-3 p-4">
           <div className="flex items-center gap-3">
             <Initials name={payout.therapistName} />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-default-800 truncate">{payout.therapistName}</p>
               <p className="text-xs text-default-400">{payout.sessions?.length ?? 0} {t('payouts.sessions')}</p>
             </div>
-            {pending > 0 && (
-              <Chip size="sm" color="warning" variant="flat">{t('payouts.pending')}</Chip>
-            )}
+            {pending > 0 && <Chip size="sm" color="warning" variant="flat">{t('payouts.pending')}</Chip>}
           </div>
 
-          {/* Earnings strip */}
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="bg-default-50 rounded-lg px-2 py-1.5">
               <p className="text-default-400">{t('payouts.totalEarned')}</p>
@@ -62,7 +58,6 @@ export default function PayoutCard({ payout, month, year, onDone }) {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2 justify-between items-center">
             <Button size="sm" variant="light" onPress={() => setExpanded((v) => !v)}>
               {expanded ? '▲' : '▼'} {t('payouts.payoutHistory')}
@@ -75,7 +70,6 @@ export default function PayoutCard({ payout, month, year, onDone }) {
             )}
           </div>
 
-          {/* Sessions breakdown */}
           {expanded && (payout.sessions?.length ?? 0) > 0 && (
             <>
               <Divider />
@@ -89,7 +83,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
               </ul>
             </>
           )}
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <ConfirmModal

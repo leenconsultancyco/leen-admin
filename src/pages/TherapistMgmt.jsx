@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, CardBody, Button, Chip, Input, Skeleton } from '@heroui/react';
+import { Card, Button, Chip, Input, Skeleton } from '@heroui/react';
 import { getTherapistsFull } from '../api';
 import { useI18n } from '../i18n';
 import TherapistEditModal from '../components/TherapistEditModal';
@@ -40,7 +40,6 @@ export default function TherapistMgmt() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search */}
       <Input
         size="sm"
         placeholder={t('clients.search')}
@@ -50,7 +49,6 @@ export default function TherapistMgmt() {
         startContent={<span className="text-default-400">🔍</span>}
       />
 
-      {/* List */}
       {loading ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
@@ -61,7 +59,7 @@ export default function TherapistMgmt() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map((th) => (
             <Card key={th.Therapist_ID} className={!th.Active ? 'opacity-60' : ''}>
-              <CardBody className="flex flex-row items-center gap-4 p-4">
+              <Card.Content className="flex flex-row items-center gap-4 p-4">
                 <Avatar therapist={th} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -76,7 +74,7 @@ export default function TherapistMgmt() {
                 <Button size="sm" variant="flat" onPress={() => setEditing(th)}>
                   {t('general.edit')}
                 </Button>
-              </CardBody>
+              </Card.Content>
             </Card>
           ))}
         </div>

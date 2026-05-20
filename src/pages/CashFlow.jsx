@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Select, SelectItem } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { getTransactions } from '../api';
 import { buildTransactionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
@@ -7,9 +7,21 @@ import DataTable from '../components/DataTable';
 import AddTransactionModal from '../components/AddTransactionModal';
 import OfflineBanner from '../components/OfflineBanner';
 
-const NOW   = new Date();
-const YEARS = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
+const NOW    = new Date();
+const YEARS  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      {label && <span className="text-xs text-default-500">{label}</span>}
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none">
+        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
+      </select>
+    </div>
+  );
+}
 
 function fmt(n, cls = '') {
   if (!n && n !== 0) return <span className="text-default-300">—</span>;
@@ -18,15 +30,15 @@ function fmt(n, cls = '') {
 
 export default function CashFlow() {
   const { t } = useI18n();
-  const [month, setMonth]   = useState(NOW.getMonth() + 1);
-  const [year, setYear]     = useState(NOW.getFullYear());
-  const [rows, setRows]     = useState([]);
+  const [month, setMonth]     = useState(String(NOW.getMonth() + 1));
+  const [year, setYear]       = useState(String(NOW.getFullYear()));
+  const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
 
   const load = () => {
     setLoading(true);
-    getTransactions(month, year).then((r) => {
+    getTransactions(Number(month), Number(year)).then((r) => {
       setRows(r.success ? (r.data?.rows ?? r.data ?? []) : []);
       setLoading(false);
     });
@@ -55,21 +67,15 @@ export default function CashFlow() {
   return (
     <div className="flex flex-col gap-4">
       <OfflineBanner />
-      {/* Controls */}
       <div className="flex flex-wrap gap-2 items-end">
-        <Select size="sm" label={t('sessions.date')} className="w-28"
-          selectedKeys={[String(month)]} onSelectionChange={(k) => setMonth(Number([...k][0]))}>
-          {MONTHS.map((m) => <SelectItem key={String(m)}>{m}</SelectItem>)}
-        </Select>
-        <Select size="sm" label="" className="w-24"
-          selectedKeys={[String(year)]} onSelectionChange={(k) => setYear(Number([...k][0]))}>
-          {YEARS.map((y) => <SelectItem key={String(y)}>{y}</SelectItem>)}
-        </Select>
+        <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
+          options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
+        <FilterSelect value={year} onChange={setYear} label=""
+          options={YEARS.map((y) => ({ id: String(y), label: y }))} />
         <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>+ {t('cashflow.addTransaction')}</Button>
         <Button size="sm" variant="flat" onPress={() => buildTransactionsExcel(rows, month, year)}>{t('cashflow.export')}</Button>
       </div>
 
-      {/* Summary strip */}
       <div className="grid grid-cols-3 gap-2 text-sm">
         {[
           { label: t('cashflow.totalIn'),  val: totals.in,  cls: 'text-success' },
@@ -84,7 +90,6 @@ export default function CashFlow() {
       </div>
 
       <DataTable columns={columns} data={rows} loading={loading} emptyMessage={t('general.noResults')} />
-
       <AddTransactionModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSuccess={load} />
     </div>
   );

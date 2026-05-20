@@ -1,8 +1,5 @@
 import { useState, useMemo } from 'react';
-import {
-  Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
-  Card, CardBody, Skeleton, Pagination,
-} from '@heroui/react';
+import { Card, Skeleton, Pagination } from '@heroui/react';
 
 const PAGE_SIZE = 20;
 
@@ -17,7 +14,7 @@ function MobileCardList({ columns, rows, onRowClick }) {
           onPress={() => onRowClick?.(row)}
           className="w-full"
         >
-          <CardBody className="p-3 gap-1">
+          <Card.Content className="p-3 gap-1">
             {preview.map((col) => (
               <div key={col.key} className="flex justify-between gap-2 text-sm">
                 <span className="text-default-400 shrink-0">{col.label}</span>
@@ -26,102 +23,100 @@ function MobileCardList({ columns, rows, onRowClick }) {
                 </span>
               </div>
             ))}
-          </CardBody>
+          </Card.Content>
         </Card>
       ))}
     </div>
   );
 }
 
-function SkeletonRows({ columns, count = 5 }) {
-  return Array.from({ length: count }).map((_, i) => (
-    <TableRow key={i}>
-      {columns.map((col) => (
-        <TableCell key={col.key}><Skeleton className="h-4 w-full rounded" /></TableCell>
-      ))}
-    </TableRow>
-  ));
-}
-
 export default function DataTable({ columns = [], data = [], loading = false, emptyMessage = '—', onRowClick }) {
-  const [sort, setSort]     = useState({ key: null, dir: 'asc' });
-  const [page, setPage]     = useState(1);
+  const [sort, setSort] = useState({ key: null, dir: 'asc' });
+  const [page, setPage] = useState(1);
 
   function toggleSort(key) {
-    setSort((prev) =>
-      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
-    );
+    setSort((prev) => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
     setPage(1);
   }
 
   const sorted = useMemo(() => {
     if (!sort.key) return data;
     return [...data].sort((a, b) => {
-      const av = a[sort.key] ?? '';
-      const bv = b[sort.key] ?? '';
-      const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+      const cmp = String(a[sort.key] ?? '').localeCompare(String(b[sort.key] ?? ''), undefined, { numeric: true });
       return sort.dir === 'asc' ? cmp : -cmp;
     });
   }, [data, sort]);
 
-  const pageCount  = Math.ceil(sorted.length / PAGE_SIZE);
-  const pageRows   = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const showPaging = sorted.length > PAGE_SIZE;
+  const pageCount = Math.ceil(sorted.length / PAGE_SIZE);
+  const pageRows  = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Desktop table */}
+      {/* Desktop plain-HTML table (HeroUI v3 Table API uncertain — using plain HTML per cheat sheet) */}
       <div className="hidden md:block overflow-x-auto">
-        <Table
-          aria-label="data-table"
-          removeWrapper
-          classNames={{ th: 'bg-default-50 text-default-500 text-xs uppercase' }}
-        >
-          <TableHeader>
-            {columns.map((col) => (
-              <TableColumn
-                key={col.key}
-                onClick={col.sortable ? () => toggleSort(col.key) : undefined}
-                className={col.sortable ? 'cursor-pointer select-none hover:text-default-800' : ''}
-              >
-                {col.label}
-                {col.sortable && sort.key === col.key && (sort.dir === 'asc' ? ' ↑' : ' ↓')}
-              </TableColumn>
-            ))}
-          </TableHeader>
-          <TableBody emptyContent={!loading ? emptyMessage : ' '}>
-            {loading
-              ? SkeletonRows({ columns })
-              : pageRows.map((row, i) => (
-                  <TableRow
-                    key={i}
-                    className={onRowClick ? 'cursor-pointer hover:bg-default-50' : ''}
-                    onClick={() => onRowClick?.(row)}
-                  >
-                    {columns.map((col) => (
-                      <TableCell key={col.key}>
-                        {col.render ? col.render(row) : (row[col.key] ?? '—')}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-            }
-          </TableBody>
-        </Table>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-default-200">
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  onClick={col.sortable ? () => toggleSort(col.key) : undefined}
+                  className={`px-3 py-2 text-start text-xs font-semibold uppercase text-default-500 bg-default-50
+                    ${col.sortable ? 'cursor-pointer select-none hover:text-default-800' : ''}`}
+                >
+                  {col.label}{col.sortable && sort.key === col.key && (sort.dir === 'asc' ? ' ↑' : ' ↓')}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-default-100">
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-3 py-2">
+                      <Skeleton className="h-4 w-full rounded" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : pageRows.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-default-400 text-sm">
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              pageRows.map((row, i) => (
+                <tr
+                  key={i}
+                  onClick={() => onRowClick?.(row)}
+                  className={`border-b border-default-100 ${onRowClick ? 'cursor-pointer hover:bg-default-50' : ''}`}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-3 py-2 text-default-700">
+                      {col.render ? col.render(row) : (row[col.key] ?? '—')}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Mobile card list */}
       <div className="md:hidden">
-        {loading
-          ? <Skeleton className="h-40 rounded-xl" />
-          : pageRows.length === 0
-            ? <p className="text-sm text-default-400 text-center py-6">{emptyMessage}</p>
-            : <MobileCardList columns={columns} rows={pageRows} onRowClick={onRowClick} />
-        }
+        {loading ? (
+          <Skeleton className="h-40 rounded-xl" />
+        ) : pageRows.length === 0 ? (
+          <p className="text-sm text-default-400 text-center py-6">{emptyMessage}</p>
+        ) : (
+          <MobileCardList columns={columns} rows={pageRows} onRowClick={onRowClick} />
+        )}
       </div>
 
-      {/* Pagination */}
-      {showPaging && (
+      {sorted.length > PAGE_SIZE && (
         <div className="flex justify-center">
           <Pagination total={pageCount} page={page} onChange={setPage} size="sm" />
         </div>

@@ -56,6 +56,237 @@ writes to Expenses or Transactions tab → dashboard re-fetches on next load
 - **Build command:** `npm run build` → /dist folder
 - **Deploy:** push to main → GitHub Actions builds and deploys automatically
 
+## HeroUI v3 Component Cheat Sheet — ALWAYS USE THIS
+
+This section exists because Claude Code defaults to v2 syntax from training data.
+ALWAYS use the patterns below. Never use v2 patterns. Check each component here before writing it.
+
+### The most important rule
+HeroUI v3 uses **compound components**. Sub-components use dot notation: `<Card.Header>` not `<CardHeader>`.
+There is NO `HeroUIProvider`. There is NO `useDisclosure`. There is NO `ModalContent`.
+
+---
+
+### Simple components (no compound structure)
+
+```jsx
+// Button
+import { Button, Spinner } from '@heroui/react';
+<Button variant="primary" size="lg" isDisabled={loading} onPress={handleClick}>
+  {loading ? <Spinner size="sm" /> : 'Submit'}
+</Button>
+// variants: primary | secondary | outline | ghost | danger | danger-soft
+// sizes: sm | md | lg
+
+// Chip
+import { Chip } from '@heroui/react';
+<Chip color="success" size="md">Connected</Chip>
+// colors: primary | secondary | success | warning | danger | default
+// v2 used 'type' prop — v3 uses 'color'
+
+// Spinner
+import { Spinner } from '@heroui/react';
+<Spinner size="sm" />   // sizes: sm | md | lg
+
+// Skeleton
+import { Skeleton } from '@heroui/react';
+<Skeleton className="h-4 w-full rounded" />
+
+// Input (single line)
+import { Input, Label } from '@heroui/react';
+<Input type="text" placeholder="Enter name" />
+// Always pair with Label for accessibility
+
+// TextArea
+import { TextArea, Label } from '@heroui/react';
+<TextArea placeholder="Enter notes" rows={4} />
+
+// Checkbox
+import { Checkbox, Label } from '@heroui/react';
+<Checkbox id="terms"><Label>Accept terms</Label></Checkbox>
+
+// Link
+import { Link } from '@heroui/react';
+<Link href="/path">Click here</Link>
+
+// Alert
+import { Alert } from '@heroui/react';
+<Alert variant="danger">Error message here</Alert>
+// variants: default | primary | success | warning | danger
+```
+
+---
+
+### Compound components — dot notation required
+
+```jsx
+// Card
+import { Card } from '@heroui/react';
+<Card>
+  <Card.Header>Title here</Card.Header>
+  <Card.Content>Body content here</Card.Content>
+  <Card.Footer>Footer here</Card.Footer>
+</Card>
+// v2 used: <CardHeader> <CardBody> <CardFooter> — WRONG in v3
+
+// Avatar
+import { Avatar } from '@heroui/react';
+<Avatar>
+  <Avatar.Image src="/photo.jpg" alt="User name" />
+  <Avatar.Fallback>AB</Avatar.Fallback>  {/* shown when image fails */}
+</Avatar>
+
+// Tabs
+import { Tabs } from '@heroui/react';
+<Tabs defaultSelectedKey="tab1">
+  <Tabs.ListContainer>
+    <Tabs.List>
+      <Tabs.Tab id="tab1">Tab One<Tabs.Indicator /></Tabs.Tab>
+      <Tabs.Tab id="tab2">Tab Two<Tabs.Indicator /></Tabs.Tab>
+    </Tabs.List>
+  </Tabs.ListContainer>
+  <Tabs.Panel id="tab1">Content for tab one</Tabs.Panel>
+  <Tabs.Panel id="tab2">Content for tab two</Tabs.Panel>
+</Tabs>
+
+// Modal — BIGGEST CHANGE from v2
+// v2 had: useDisclosure, ModalContent, ModalHeader, ModalBody, ModalFooter — ALL GONE
+// v3 uses: Modal.Trigger (no state needed) OR isOpen/onOpenChange on Modal.Backdrop
+import { Button, Modal } from '@heroui/react';
+
+// Option A — Trigger pattern (no state needed, simplest):
+<Modal>
+  <Modal.Trigger>
+    <Button>Open Modal</Button>
+  </Modal.Trigger>
+  <Modal.Backdrop>
+    <Modal.Container>
+      <Modal.Dialog>
+        <Modal.Header>Modal Title</Modal.Header>
+        <Modal.Body>Modal content here</Modal.Body>
+        <Modal.Footer>
+          <Button>Close</Button>
+        </Modal.Footer>
+      </Modal.Dialog>
+    </Modal.Container>
+  </Modal.Backdrop>
+</Modal>
+
+// Option B — Controlled pattern (when you need to open/close from code):
+import { useOverlayState } from '@heroui/react';  // replaces useDisclosure
+const state = useOverlayState();
+<Button onPress={state.open}>Open</Button>
+<Modal.Backdrop isOpen={state.isOpen} onOpenChange={state.toggle}>
+  <Modal.Container>
+    <Modal.Dialog>
+      <Modal.Header>Title</Modal.Header>
+      <Modal.Body>Content</Modal.Body>
+      <Modal.Footer>
+        <Button onPress={state.close}>Close</Button>
+      </Modal.Footer>
+    </Modal.Dialog>
+  </Modal.Container>
+</Modal.Backdrop>
+
+// Select
+import { Label, ListBox, Select } from '@heroui/react';
+<Select placeholder="Choose one">
+  <Label>Select label</Label>
+  <ListBox>
+    <ListBox.Item id="a">Option A</ListBox.Item>
+    <ListBox.Item id="b">Option B</ListBox.Item>
+  </ListBox>
+</Select>
+// v2 used: <SelectItem> — WRONG in v3, use <ListBox.Item>
+
+// RadioGroup
+import { Description, Label, Radio, RadioGroup } from '@heroui/react';
+<RadioGroup name="plan" defaultValue="monthly">
+  <Label>Billing period</Label>
+  <Radio value="monthly"><Label>Monthly</Label></Radio>
+  <Radio value="yearly"><Label>Yearly</Label></Radio>
+</RadioGroup>
+
+// Switch
+import { Label, Switch } from '@heroui/react';
+<Switch defaultSelected>
+  <Label>Enable notifications</Label>
+</Switch>
+
+// Tooltip
+import { Button, Tooltip } from '@heroui/react';
+<Tooltip>
+  <Tooltip.Trigger>
+    <Button>Hover me</Button>
+  </Tooltip.Trigger>
+  <Tooltip.Content>Tooltip text here</Tooltip.Content>
+</Tooltip>
+
+// Popover
+import { Button, Popover } from '@heroui/react';
+<Popover>
+  <Popover.Trigger>
+    <Button>Open Popover</Button>
+  </Popover.Trigger>
+  <Popover.Content>
+    <div className="p-4">Popover content here</div>
+  </Popover.Content>
+</Popover>
+
+// Drawer (new in v3 — use instead of full-page overlays on mobile)
+import { Button, Drawer } from '@heroui/react';
+<Drawer>
+  <Drawer.Trigger>
+    <Button>Open Drawer</Button>
+  </Drawer.Trigger>
+  <Drawer.Backdrop>
+    <Drawer.Container>
+      <Drawer.Content>
+        <Drawer.Header>Title</Drawer.Header>
+        <Drawer.Body>Content here</Drawer.Body>
+        <Drawer.Footer>
+          <Button>Close</Button>
+        </Drawer.Footer>
+      </Drawer.Content>
+    </Drawer.Container>
+  </Drawer.Backdrop>
+</Drawer>
+```
+
+---
+
+### Table
+```jsx
+import { Table } from '@heroui/react';
+// Table in v3 uses standard HTML-like structure — verify at heroui.com/docs/components/table
+// If Table compound API is uncertain, use a plain HTML <table> with Tailwind classes instead
+// Never guess the Table API — check the docs or use plain HTML
+```
+
+---
+
+### What does NOT exist in v3 — never import these:
+```
+ModalContent      → use Modal.Dialog
+ModalHeader       → use Modal.Header
+ModalBody         → use Modal.Body
+ModalFooter       → use Modal.Footer
+useDisclosure     → use Modal.Trigger (no state) or useOverlayState (controlled)
+HeroUIProvider    → use I18nProvider for locale only
+CardHeader        → use Card.Header
+CardBody          → use Card.Content
+CardFooter        → use Card.Footer
+SelectItem        → use ListBox.Item
+```
+
+---
+
+### Import pattern — always named imports from @heroui/react:
+```jsx
+import { Button, Card, Modal, Avatar, Tabs, Select, ListBox, Chip, Spinner } from '@heroui/react';
+```
+
+
 ---
 
 ## HeroUI Theme — Leen Design System

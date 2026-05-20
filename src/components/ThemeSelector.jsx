@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tooltip } from '@heroui/react';
 import { applyTheme, THEMES, THEME_LABELS } from '../utils';
 import { useI18n } from '../i18n';
@@ -26,17 +26,20 @@ export default function ThemeSelector() {
   return (
     <div className="flex gap-2 flex-wrap">
       {THEMES.map((theme) => (
-        <Tooltip key={theme} content={THEME_LABELS[theme][lang] || theme} placement="top">
-          <button
-            type="button"
-            onClick={() => select(theme)}
-            style={{ backgroundColor: THEME_COLORS[theme] }}
-            className={[
-              'w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none',
-              current === theme ? 'ring-2 ring-offset-2 ring-default-400 scale-110' : '',
-            ].join(' ')}
-            aria-label={THEME_LABELS[theme][lang]}
-          />
+        <Tooltip key={theme}>
+          <Tooltip.Trigger>
+            <button
+              type="button"
+              onClick={() => select(theme)}
+              style={{ backgroundColor: THEME_COLORS[theme] }}
+              className={[
+                'w-7 h-7 rounded-full transition-transform hover:scale-110 focus:outline-none',
+                current === theme ? 'ring-2 ring-offset-2 ring-default-400 scale-110' : '',
+              ].join(' ')}
+              aria-label={THEME_LABELS[theme][lang]}
+            />
+          </Tooltip.Trigger>
+          <Tooltip.Content>{THEME_LABELS[theme][lang] || theme}</Tooltip.Content>
         </Tooltip>
       ))}
     </div>

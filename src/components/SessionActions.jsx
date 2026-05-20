@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Popover, PopoverTrigger, PopoverContent, Select, SelectItem, Spinner } from '@heroui/react';
+import { Button, Label, ListBox, Popover, Select, Spinner } from '@heroui/react';
 import { confirmBooking, cancelBooking, markPaid } from '../api';
 import { getIsOnline } from '../hooks/useOnlineStatus';
 import { useI18n } from '../i18n';
@@ -10,7 +10,7 @@ const PAYMENT_METHODS = ['Cash', 'Bank transfer'];
 export default function SessionActions({ booking, onDone }) {
   const { t } = useI18n();
   const online = getIsOnline();
-  const [busy, setBusy]         = useState(false);
+  const [busy, setBusy]             = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [payMethod, setPayMethod]   = useState('Cash');
 
@@ -36,24 +36,24 @@ export default function SessionActions({ booking, onDone }) {
       )}
 
       {isConfirmed && isUnpaid && (
-        <Popover placement="bottom-end">
-          <PopoverTrigger>
+        <Popover>
+          <Popover.Trigger>
             <Button size="sm" color="success" variant="flat" isDisabled={!online}>{t('sessions.markPaid')}</Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-3 gap-2 w-44">
-            <Select
-              size="sm"
-              label={t('sessions.paymentMethod')}
-              selectedKeys={[payMethod]}
-              onSelectionChange={(keys) => setPayMethod([...keys][0])}
-            >
-              {PAYMENT_METHODS.map((m) => <SelectItem key={m}>{m}</SelectItem>)}
-            </Select>
-            <Button size="sm" color="success" fullWidth isDisabled={busy || !online}
-              onPress={() => run(() => markPaid(booking.Booking_ID, payMethod))}>
-              {t('general.confirm')}
-            </Button>
-          </PopoverContent>
+          </Popover.Trigger>
+          <Popover.Content>
+            <div className="p-3 flex flex-col gap-2 w-44">
+              <Select selectedKey={payMethod} onSelectionChange={(k) => setPayMethod(k)}>
+                <Label>{t('sessions.paymentMethod')}</Label>
+                <ListBox>
+                  {PAYMENT_METHODS.map((m) => <ListBox.Item id={m} key={m}>{m}</ListBox.Item>)}
+                </ListBox>
+              </Select>
+              <Button size="sm" color="success" fullWidth isDisabled={busy || !online}
+                onPress={() => run(() => markPaid(booking.Booking_ID, payMethod))}>
+                {t('general.confirm')}
+              </Button>
+            </div>
+          </Popover.Content>
         </Popover>
       )}
 

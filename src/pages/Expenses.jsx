@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Select, SelectItem, Card, CardBody, Chip } from '@heroui/react';
+import { Button, Card } from '@heroui/react';
 import { getExpenses } from '../api';
 import { buildExpensesExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
@@ -12,28 +12,39 @@ const NOW    = new Date();
 const YEARS  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      {label && <span className="text-xs text-default-500">{label}</span>}
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none">
+        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function VarianceCell({ row }) {
   const v = Number(row.Variance || (row.Actual_EGP || 0) - (row.Expected_EGP || 0));
   if (v === 0) return <span dir="ltr" className="text-default-400">0</span>;
-  const over = v > 0;
   return (
-    <span dir="ltr" className={over ? 'text-danger font-medium' : 'text-success font-medium'}>
-      {over ? '▲' : '▼'} {Math.abs(v).toLocaleString('en-EG')} EGP
+    <span dir="ltr" className={v > 0 ? 'text-danger font-medium' : 'text-success font-medium'}>
+      {v > 0 ? '▲' : '▼'} {Math.abs(v).toLocaleString('en-EG')} EGP
     </span>
   );
 }
 
 export default function Expenses() {
   const { t } = useI18n();
-  const [month, setMonth]   = useState(NOW.getMonth() + 1);
-  const [year, setYear]     = useState(NOW.getFullYear());
-  const [rows, setRows]     = useState([]);
+  const [month, setMonth]     = useState(String(NOW.getMonth() + 1));
+  const [year, setYear]       = useState(String(NOW.getFullYear()));
+  const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
 
   const load = () => {
     setLoading(true);
-    getExpenses(month, year).then((r) => {
+    getExpenses(Number(month), Number(year)).then((r) => {
       setRows(r.success ? (r.data ?? []) : []);
       setLoading(false);
     });
@@ -48,7 +59,6 @@ export default function Expenses() {
 
   const variance = totals.actual - totals.expected;
 
-  // Aggregate rows by category for the chart
   const chartData = useMemo(() => {
     const map = {};
     rows.forEach((r) => {
@@ -76,21 +86,15 @@ export default function Expenses() {
   return (
     <div className="flex flex-col gap-4">
       <OfflineBanner />
-      {/* Controls */}
       <div className="flex flex-wrap gap-2 items-end">
-        <Select size="sm" label={t('sessions.date')} className="w-28"
-          selectedKeys={[String(month)]} onSelectionChange={(k) => setMonth(Number([...k][0]))}>
-          {MONTHS.map((m) => <SelectItem key={String(m)}>{m}</SelectItem>)}
-        </Select>
-        <Select size="sm" label="" className="w-24"
-          selectedKeys={[String(year)]} onSelectionChange={(k) => setYear(Number([...k][0]))}>
-          {YEARS.map((y) => <SelectItem key={String(y)}>{y}</SelectItem>)}
-        </Select>
+        <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
+          options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
+        <FilterSelect value={year} onChange={setYear} label=""
+          options={YEARS.map((y) => ({ id: String(y), label: y }))} />
         <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>+ {t('expenses.addExpense')}</Button>
         <Button size="sm" variant="flat" onPress={() => buildExpensesExcel(rows, month, year)}>{t('expenses.export')}</Button>
       </div>
 
-      {/* Summary strip */}
       <div className="grid grid-cols-3 gap-2 text-sm">
         <div className="bg-default-50 rounded-xl px-3 py-2">
           <p className="text-default-400 text-xs">{t('expenses.expected')}</p>
@@ -108,16 +112,14 @@ export default function Expenses() {
         </div>
       </div>
 
-      {/* Chart */}
       <Card>
-        <CardBody className="p-4 gap-2">
+        <Card.Content className="p-4 gap-2">
           <p className="text-sm font-semibold text-default-700">{t('expenses.chart')}</p>
           <ExpenseChart data={chartData} loading={loading} />
-        </CardBody>
+        </Card.Content>
       </Card>
 
       <DataTable columns={columns} data={rows} loading={loading} emptyMessage={t('general.noResults')} />
-
       <AddExpenseModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSuccess={load} />
     </div>
   );

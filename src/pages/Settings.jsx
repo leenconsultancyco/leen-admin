@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, CardBody, Input, Button, Divider, Spinner } from '@heroui/react';
+import { Card, Input, Button, Divider, Spinner } from '@heroui/react';
 import { updatePassword } from '../api';
 import { hashPassword, getAdminUsername } from '../auth';
 import { useI18n } from '../i18n';
@@ -18,11 +18,11 @@ function daysSince(dateStr) {
 function Section({ title, children }) {
   return (
     <Card>
-      <CardBody className="gap-4 p-5">
+      <Card.Content className="flex flex-col gap-4 p-5">
         <p className="text-base font-semibold text-default-800">{title}</p>
         <Divider />
         {children}
-      </CardBody>
+      </Card.Content>
     </Card>
   );
 }
@@ -30,7 +30,6 @@ function Section({ title, children }) {
 export default function Settings() {
   const { t, lang } = useI18n();
 
-  // Section 0 — URL
   const [scriptUrl, setScriptUrl] = useState(localStorage.getItem(URL_KEY) || '');
   const [editing, setEditing]     = useState(!localStorage.getItem(URL_KEY));
 
@@ -41,7 +40,6 @@ export default function Settings() {
     window.location.reload();
   }
 
-  // Section 1 — Password
   const [pw, setPw]         = useState({ current: '', next: '', confirm: '' });
   const [pwSaving, setPwSaving] = useState(false);
   const [pwMsg, setPwMsg]   = useState(null);
@@ -61,7 +59,6 @@ export default function Settings() {
     }
   }
 
-  // Section 2 — Backup
   const [lastBackup, setLastBackup] = useState(localStorage.getItem(BACKUP_KEY) || '');
 
   function handleBackupDone(date) {
@@ -69,12 +66,11 @@ export default function Settings() {
     setLastBackup(date);
   }
 
-  const stale    = daysSince(lastBackup) > 7;
+  const stale = daysSince(lastBackup) > 7;
   const neverBacked = !lastBackup;
 
   return (
     <div className="flex flex-col gap-5 max-w-lg mx-auto">
-      {/* Language + Theme row */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="text-sm text-default-500">{t('settings.chooseTheme')}</span>
@@ -83,17 +79,11 @@ export default function Settings() {
         <LanguageToggle />
       </div>
 
-      {/* Section 0 — Apps Script URL */}
       <Section title={lang === 'ar' ? 'رابط النظام' : 'Backend URL'}>
         {editing ? (
           <div className="flex flex-col gap-2">
-            <Input
-              type="password"
-              label="Apps Script URL"
-              value={scriptUrl}
-              onValueChange={setScriptUrl}
-              placeholder="https://script.google.com/macros/s/..."
-            />
+            <Input type="password" label="Apps Script URL" value={scriptUrl}
+              onValueChange={setScriptUrl} placeholder="https://script.google.com/macros/s/..." />
             <Button color="primary" size="sm" onPress={saveUrl} isDisabled={!scriptUrl.trim()}>
               {lang === 'ar' ? 'حفظ' : 'Save & Reconnect'}
             </Button>
@@ -106,7 +96,6 @@ export default function Settings() {
         )}
       </Section>
 
-      {/* Section 1 — Change Password */}
       <Section title={t('settings.changePassword')}>
         <Input type="password" label={t('settings.currentPassword')} value={pw.current}
           onValueChange={(v) => setPw((p) => ({ ...p, current: v }))} />
@@ -119,12 +108,9 @@ export default function Settings() {
         {pwMsg && <p className={`text-sm ${pwMsg.ok ? 'text-success' : 'text-danger'}`}>{pwMsg.text}</p>}
         <Button color="primary" size="sm" isDisabled={pwSaving || !pw.next || pw.next !== pw.confirm}
           startContent={pwSaving ? <Spinner size="sm" color="white" /> : undefined}
-          onPress={handlePasswordSave}>
-          {t('general.save')}
-        </Button>
+          onPress={handlePasswordSave}>{t('general.save')}</Button>
       </Section>
 
-      {/* Section 2 — Backup */}
       <Section title={t('settings.backup')}>
         <div className="text-sm text-default-600">
           <span>{t('settings.lastBackup')}: </span>
@@ -139,21 +125,14 @@ export default function Settings() {
         )}
         <BackupButton onBackupDone={handleBackupDone} />
         <p className="text-xs text-default-400">
-          {lang === 'ar'
-            ? 'تشمل النسخة: المعاملات، المصروفات، الحجوزات، المستحقات.'
-            : 'Includes: transactions, expenses, bookings, and payouts.'}
+          {lang === 'ar' ? 'تشمل النسخة: المعاملات، المصروفات، الحجوزات، المستحقات.' : 'Includes: transactions, expenses, bookings, and payouts.'}
         </p>
       </Section>
 
-      {/* Section 3 — Center Info */}
       <Section title={t('settings.centerInfo')}>
-        <div className="text-sm text-default-600 space-y-1">
-          <p><span className="text-default-400">Admin: </span>{getAdminUsername()}</p>
-        </div>
+        <p className="text-sm text-default-600"><span className="text-default-400">Admin: </span>{getAdminUsername()}</p>
         <p className="text-xs text-default-400">
-          {lang === 'ar'
-            ? 'لتعديل معلومات المركز، عدّل قاعدة البيانات في Google Sheets مباشرةً.'
-            : 'To change center info, edit the Settings tab in Google Sheets directly.'}
+          {lang === 'ar' ? 'لتعديل معلومات المركز، عدّل قاعدة البيانات في Google Sheets مباشرةً.' : 'To change center info, edit the Settings tab in Google Sheets directly.'}
         </p>
       </Section>
     </div>

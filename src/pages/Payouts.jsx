@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Select, SelectItem, Skeleton } from '@heroui/react';
+import { Button, Skeleton } from '@heroui/react';
 import { getPayouts } from '../api';
 import { buildPayoutsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
@@ -10,16 +10,28 @@ const NOW    = new Date();
 const YEARS  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      {label && <span className="text-xs text-default-500">{label}</span>}
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none">
+        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
+      </select>
+    </div>
+  );
+}
+
 export default function Payouts() {
   const { t } = useI18n();
-  const [month, setMonth]     = useState(NOW.getMonth() + 1);
-  const [year, setYear]       = useState(NOW.getFullYear());
+  const [month, setMonth]     = useState(String(NOW.getMonth() + 1));
+  const [year, setYear]       = useState(String(NOW.getFullYear()));
   const [payouts, setPayouts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = () => {
     setLoading(true);
-    getPayouts(month, year).then((r) => {
+    getPayouts(Number(month), Number(year)).then((r) => {
       setPayouts(r.success ? (r.data ?? []) : []);
       setLoading(false);
     });
@@ -38,22 +50,16 @@ export default function Payouts() {
   return (
     <div className="flex flex-col gap-4">
       <OfflineBanner />
-      {/* Controls */}
       <div className="flex flex-wrap gap-2 items-end">
-        <Select size="sm" label={t('payouts.month')} className="w-28"
-          selectedKeys={[String(month)]} onSelectionChange={(k) => setMonth(Number([...k][0]))}>
-          {MONTHS.map((m) => <SelectItem key={String(m)}>{m}</SelectItem>)}
-        </Select>
-        <Select size="sm" label="" className="w-24"
-          selectedKeys={[String(year)]} onSelectionChange={(k) => setYear(Number([...k][0]))}>
-          {YEARS.map((y) => <SelectItem key={String(y)}>{y}</SelectItem>)}
-        </Select>
+        <FilterSelect value={month} onChange={setMonth} label={t('payouts.month')}
+          options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
+        <FilterSelect value={year} onChange={setYear} label=""
+          options={YEARS.map((y) => ({ id: String(y), label: y }))} />
         <Button size="sm" variant="flat" onPress={() => buildPayoutsExcel(payouts, month, year)}>
           {t('payouts.export')}
         </Button>
       </div>
 
-      {/* Center revenue summary */}
       {!loading && (
         <div className="bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 text-sm flex items-center justify-between">
           <span className="text-default-600">{t('reports.revenue')} ({t('nav.sessions')})</span>
@@ -61,7 +67,6 @@ export default function Payouts() {
         </div>
       )}
 
-      {/* Payout cards */}
       {loading ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
@@ -71,13 +76,7 @@ export default function Payouts() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {payouts.map((p) => (
-            <PayoutCard
-              key={p.therapistId}
-              payout={p}
-              month={month}
-              year={year}
-              onDone={load}
-            />
+            <PayoutCard key={p.therapistId} payout={p} month={month} year={year} onDone={load} />
           ))}
         </div>
       )}
