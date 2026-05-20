@@ -37,6 +37,7 @@ export default function ClientDetailModal({ client, isOpen, onClose }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
       <ModalContent>
+        {() => (<>
         <ModalHeader className="flex items-center gap-3">
           <span>{client.Name}</span>
           <Chip size="sm" color={client.Status === 'Active' ? 'success' : 'default'} variant="flat">
@@ -88,6 +89,7 @@ export default function ClientDetailModal({ client, isOpen, onClose }) {
             </div>
           </div>
         </ModalBody>
+        </>)}
       </ModalContent>
     </Modal>
   );

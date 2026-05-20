@@ -57,6 +57,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="md" scrollBehavior="inside">
       <ModalContent>
+        {() => (<>
         <ModalHeader>{t('cashflow.addTransaction')}</ModalHeader>
         <ModalBody className="gap-3">
           <div className="flex gap-2">
@@ -95,6 +96,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
             {t('general.save')}
           </Button>
         </ModalFooter>
+        </>)}
       </ModalContent>
     </Modal>
   );

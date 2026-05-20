@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Modal, ModalContent, ModalBody, Button } from '@heroui/react';
+import { Modal, ModalContent, ModalBody, Button, useDisclosure } from '@heroui/react';
 import { useI18n } from '../i18n';
 import { logout } from '../auth';
 
@@ -44,7 +43,7 @@ function TabButton({ icon, label, active, onClick, to }) {
 export default function BottomNav() {
   const { t } = useI18n();
   const location = useLocation();
-  const [moreOpen, setMoreOpen] = useState(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const moreActive = MORE_ITEMS.some((item) => location.pathname === item.path);
 
@@ -65,49 +64,51 @@ export default function BottomNav() {
         ))}
         <TabButton
           icon="••••"
-          label={t('general.more') || 'More'}
+          label={t('general.more')}
           active={moreActive}
-          onClick={() => setMoreOpen(true)}
+          onClick={onOpen}
         />
       </nav>
 
       {/* More sheet */}
       <Modal
-        isOpen={moreOpen}
-        onClose={() => setMoreOpen(false)}
+        isOpen={isOpen}
+        onClose={onClose}
         placement="bottom"
         hideCloseButton={false}
         classNames={{ base: 'rounded-t-2xl rounded-b-none m-0 max-w-full' }}
       >
         <ModalContent>
-          <ModalBody className="py-4 px-4">
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              {MORE_ITEMS.map(({ key, path, icon }) => (
-                <Link
-                  key={key}
-                  to={path}
-                  onClick={() => setMoreOpen(false)}
-                  className={[
-                    'flex flex-col items-center gap-1 py-3 rounded-xl text-sm transition-colors',
-                    location.pathname === path
-                      ? 'bg-primary/10 text-primary font-semibold'
-                      : 'bg-default-100 text-default-600',
-                  ].join(' ')}
-                >
-                  <span className="text-2xl leading-none">{icon}</span>
-                  <span>{t(`nav.${key}`)}</span>
-                </Link>
-              ))}
-            </div>
-            <Button
-              color="danger"
-              variant="flat"
-              fullWidth
-              onPress={() => { setMoreOpen(false); logout(); }}
-            >
-              {t('nav.logout')}
-            </Button>
-          </ModalBody>
+          {(close) => (
+            <ModalBody className="py-4 px-4">
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {MORE_ITEMS.map(({ key, path, icon }) => (
+                  <Link
+                    key={key}
+                    to={path}
+                    onClick={close}
+                    className={[
+                      'flex flex-col items-center gap-1 py-3 rounded-xl text-sm transition-colors',
+                      location.pathname === path
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'bg-default-100 text-default-600',
+                    ].join(' ')}
+                  >
+                    <span className="text-2xl leading-none">{icon}</span>
+                    <span>{t(`nav.${key}`)}</span>
+                  </Link>
+                ))}
+              </div>
+              <Button
+                color="danger"
+                variant="flat"
+                fullWidth
+                onPress={() => { close(); logout(); }}
+              >
+                {t('nav.logout')}
+              </Button>
+            </ModalBody>
+          )}
         </ModalContent>
       </Modal>
     </>

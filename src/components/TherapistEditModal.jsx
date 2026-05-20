@@ -71,6 +71,7 @@ export default function TherapistEditModal({ therapist, isOpen, onClose, onSucce
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
       <ModalContent>
+        {() => (<>
         <ModalHeader>{t('therapistMgmt.editTherapist')}: {therapist.Name_EN}</ModalHeader>
         <ModalBody>
           <Tabs aria-label="edit-sections" size="sm">
@@ -161,6 +162,7 @@ export default function TherapistEditModal({ therapist, isOpen, onClose, onSucce
             {t('therapistMgmt.saveChanges')}
           </Button>
         </ModalFooter>
+        </>)}
       </ModalContent>
     </Modal>
   );
