@@ -24,8 +24,8 @@ Three components, zero server costs:
 
 | Component       | Type            | Hosting                        | Tech                    |
 |-----------------|-----------------|--------------------------------|-------------------------|
-| leen-booking    | Client PWA      | GitHub Pages (public repo)     | React 18 + Vite + HeroUI|
-| leen-admin      | Admin PWA       | GitHub Pages (public repo)     | React 18 + Vite + HeroUI|
+| leen-booking    | Client PWA      | GitHub Pages (public repo)     | React 19 + Vite + HeroUI|
+| leen-admin      | Admin PWA       | GitHub Pages (public repo)     | React 19 + Vite + HeroUI|
 | Leen Backend    | Sheet + Script  | Google Drive (private)         | Google Apps Script      |
 
 **Data flow — booking:**
@@ -41,9 +41,9 @@ writes to Expenses or Transactions tab → dashboard re-fetches on next load
 
 ## Tech Stack
 
-- **Framework:** React 18 + Vite
+- **Framework:** React 19 + Vite (React 19 required by HeroUI v3)
 - **UI Library:** HeroUI v3 (@heroui/react)
-- **Styling:** Tailwind CSS v4 (bundled with HeroUI)
+- **Styling:** Tailwind CSS v4
 - **Routing:** React Router v6
 - **Charts:** Recharts (admin app only)
 - **Excel export:** SheetJS (xlsx)
@@ -64,47 +64,399 @@ Configured in tailwind.config.js in both repos.
 Primary color: calm teal green. Secondary: soft purple.
 
 ```js
-// tailwind.config.js
-import { heroui } from "@heroui/react";
+// HeroUI v3 uses Tailwind CSS v4 — CSS-first configuration (no tailwind.config.js plugins array)
+// Instead, configure in your main CSS file (index.css):
+// @import "tailwindcss";
+// @import "@heroui/styles";
+// Then use CSS variables for theming:
 
+// For custom primary color in index.css:
+// :root {
+//   --color-primary: oklch(0.62 0.15 162);   /* teal */
+// }
+
+// The theme system in v3 uses CSS variables directly, not heroui() plugin.
+// See CLAUDE.md Theme System section for the 6-theme CSS variable definitions.
+
+// tailwind.config.js (minimal — v4 is CSS-first):
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: { extend: {} },
-  darkMode: "class",
-  plugins: [
-    heroui({
-      themes: {
-        light: {
-          colors: {
-            primary: {
-              50:  "#E8F7F2",
-              100: "#C5EBE0",
-              200: "#8ED6C0",
-              300: "#57C1A0",
-              400: "#2DAE88",
-              500: "#0E9B73",
-              600: "#0B7D5D",
-              700: "#085F47",
-              800: "#054030",
-              900: "#022018",
-              DEFAULT: "#0E9B73",
-              foreground: "#FFFFFF",
-            },
-            secondary: {
-              DEFAULT: "#7C6FCD",
-              foreground: "#FFFFFF",
-            },
-          },
-        },
-      },
-    }),
   ],
 };
+
+// Legacy reference (v2 syntax — DO NOT USE with v3):
+// import { heroui } from "@heroui/react";
+// plugins: [ heroui({ themes: { light: { colors: { primary: {
 ```
+
+
+---
+
+## Theme System — 6 Color Palettes
+
+Both apps support theme switching. Selected theme stored in localStorage key `leen_theme`.
+Default theme: **teal**. Applied via `data-theme` attribute on `<html>` element.
+Theme switcher appears in: **Settings page (admin)** and **Home screen (booking)**.
+
+### All 6 themes defined in tailwind.config.js:
+
+```js
+heroui({
+  themes: {
+    teal: {         // DEFAULT
+      colors: { primary: { DEFAULT: "#0E9B73", foreground: "#FFFFFF",
+        50:"#E8F7F2", 100:"#C5EBE0", 200:"#8ED6C0", 300:"#57C1A0",
+        400:"#2DAE88", 500:"#0E9B73", 600:"#0B7D5D", 700:"#085F47",
+        800:"#054030", 900:"#022018" }}
+    },
+    navy: {
+      colors: { primary: { DEFAULT: "#1B2A6B", foreground: "#FFFFFF",
+        50:"#E8EAF6", 100:"#C5CBE9", 200:"#9FA8DA", 300:"#7986CB",
+        400:"#5C6BC0", 500:"#3F51B5", 600:"#3949AB", 700:"#303F9F",
+        800:"#283593", 900:"#1B2A6B" }}
+    },
+    blue: {
+      colors: { primary: { DEFAULT: "#1A6ED8", foreground: "#FFFFFF",
+        50:"#E3F2FD", 100:"#BBDEFB", 200:"#90CAF9", 300:"#64B5F6",
+        400:"#42A5F5", 500:"#2196F3", 600:"#1E88E5", 700:"#1976D2",
+        800:"#1565C0", 900:"#1A6ED8" }}
+    },
+    green: {
+      colors: { primary: { DEFAULT: "#2E7D32", foreground: "#FFFFFF",
+        50:"#E8F5E9", 100:"#C8E6C9", 200:"#A5D6A7", 300:"#81C784",
+        400:"#66BB6A", 500:"#4CAF50", 600:"#43A047", 700:"#388E3C",
+        800:"#2E7D32", 900:"#1B5E20" }}
+    },
+    red: {
+      colors: { primary: { DEFAULT: "#C62828", foreground: "#FFFFFF",
+        50:"#FFEBEE", 100:"#FFCDD2", 200:"#EF9A9A", 300:"#E57373",
+        400:"#EF5350", 500:"#F44336", 600:"#E53935", 700:"#D32F2F",
+        800:"#C62828", 900:"#B71C1C" }}
+    },
+    purple: {
+      colors: { primary: { DEFAULT: "#6A1B9A", foreground: "#FFFFFF",
+        50:"#F3E5F5", 100:"#E1BEE7", 200:"#CE93D8", 300:"#BA68C8",
+        400:"#AB47BC", 500:"#9C27B0", 600:"#8E24AA", 700:"#7B1FA2",
+        800:"#6A1B9A", 900:"#4A148C" }}
+    },
+  }
+})
+```
+
+### Theme switching function (in utils.js both repos):
+```js
+const THEMES = ['teal', 'navy', 'blue', 'green', 'red', 'purple'];
+const THEME_LABELS = {
+  teal:   { en: 'Teal',      ar: 'أخضر مائي' },
+  navy:   { en: 'Navy Blue', ar: 'أزرق داكن' },
+  blue:   { en: 'Blue',      ar: 'أزرق'      },
+  green:  { en: 'Green',     ar: 'أخضر'      },
+  red:    { en: 'Red',       ar: 'أحمر'       },
+  purple: { en: 'Purple',    ar: 'بنفسجي'    },
+};
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('leen_theme', theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('leen_theme') || 'teal';
+  applyTheme(saved);
+  return saved;
+}
+```
+
+### ThemeSelector component (src/components/ThemeSelector.jsx — both repos):
+- Six circular color swatches in a row
+- Active theme has a ring/border highlight
+- Clicking a swatch calls applyTheme()
+- Used on: Settings page (admin), Home screen (booking)
+- Tooltip/label shows theme name in current language on hover
+
+---
+
+## Online / Offline System (both repos)
+
+Both apps must handle unreliable internet gracefully. The system has four parts:
+
+### Problem this solves
+Google Sheets is the only database. If the Apps Script URL is unreachable
+(bad Wi-Fi, mobile data dropout, Apps Script quota exceeded), data submitted
+by the user would silently disappear. The offline system prevents data loss
+and gives the user clear feedback at all times.
+
+---
+
+### Part 1 — useOnlineStatus hook (src/hooks/useOnlineStatus.js — both repos)
+
+Detects real connectivity, not just browser online/offline events.
+Browser events are unreliable — phone can show "connected" to Wi-Fi but
+have no actual internet. This hook verifies by pinging the Apps Script.
+
+```js
+// Returns:
+// {
+//   isOnline: boolean,       — true if confirmed internet connection
+//   status: string,          — 'online' | 'offline' | 'checking'
+//   lastChecked: Date|null,  — when last ping happened
+// }
+
+// Behavior:
+// - Listens to window 'online' and 'offline' events
+// - Also pings APPS_SCRIPT_URL every 60 seconds with action=ping (60s keeps Apps Script quota usage low)
+//   APPS_SCRIPT_URL imported from '../config.js' — NOT from api.js
+//   (Apps Script returns { pong: true } for this action)
+// - On window 'online' event: immediately re-pings to confirm
+// - On window 'offline' event: sets status to 'offline' immediately
+// - Status 'checking' shown only during the first ping or after reconnect
+// - Exports: useOnlineStatus() hook
+```
+
+---
+
+### Part 2 — offlineQueue module (src/offlineQueue.js — both repos)
+
+Queues write operations when offline and replays them when back online.
+Read operations (GET) are never queued — they just fail gracefully.
+Only POST operations (writes) are queued.
+
+```js
+// localStorage key: 'leen_offline_queue'
+// Queue item structure:
+// {
+//   id: string,             — unique queue ID (timestamp + random)
+//   action: string,         — backend action name e.g. 'submitBooking'
+//   data: object,           — full request body (already includes idempotencyKey)
+//   idempotencyKey: string, — UUID generated when the user took the action (prevents duplicate writes on retry/multi-device sync)
+//   queuedAt: string,       — ISO timestamp when queued
+//   retries: number,        — how many sync attempts have failed (starts at 0)
+// }
+
+// Functions to implement:
+
+enqueueRequest(action, data)
+— Adds item to queue in localStorage
+— Returns the queued item id
+— Limit: max 50 items (prevents localStorage overflow)
+
+getQueue()
+— Returns full array of queued items (parsed from localStorage)
+— Returns [] if localStorage key doesn't exist
+
+getQueueCount()
+— Returns number of items in queue
+
+clearQueue()
+— Empties the entire queue (used after successful full sync)
+
+removeFromQueue(id)
+— Removes one item by id (used after individual item syncs successfully)
+
+async syncQueue(apiFn)
+— Attempts to send all queued items
+— apiFn is a reference to the raw POST fetch function from api.js
+— For each item: call apiFn(item.action, item.data)
+— On success: removeFromQueue(item.id)
+— On failure: increment item.retries — if retries >= 3, remove it
+  (it will never succeed — log it to console as a permanent failure)
+— Returns { synced: number, failed: number }
+```
+
+---
+
+### Part 3 — ConnectionBadge component (src/components/ConnectionBadge.jsx — both repos)
+
+A small status indicator shown in the UI at all times so the user always
+knows whether their data is being saved to Google Sheets or queued locally.
+
+```jsx
+// Props: none — reads state from useOnlineStatus() and offlineQueue directly
+
+// Four visual states (HeroUI Chip component):
+//
+// 🟢 ONLINE  — color="success", small dot + "متصل" / "Connected"
+//              shown when isOnline=true and queue is empty
+//
+// 🟡 CHECKING — color="warning", spinner + "جاري الاتصال..." / "Checking..."
+//              shown when status='checking'
+//
+// 🔴 OFFLINE  — color="danger", icon + "غير متصل — X في الانتظار" / "Offline — X queued"
+//              shown when isOnline=false
+//              X = getQueueCount() — shows how many entries are waiting
+//
+// 🔵 SYNCING  — color="primary", spinner + "جاري المزامنة..." / "Syncing..."
+//              shown when reconnected and syncQueue() is running
+
+// Placement:
+// — leen-booking: bottom of BookingForm page, above submit button
+// — leen-admin: top-right corner of TopBar (mobile) and bottom of Sidebar (desktop)
+
+// Behavior:
+// — When status changes from offline → online: automatically call syncQueue()
+// — Show SYNCING state during sync
+// — After sync completes: show success toast with count of synced items
+// — If sync has permanent failures: show warning toast
+```
+
+---
+
+### Part 4 — api.js integration (both repos)
+
+All POST functions in api.js must check connection before sending.
+If offline, enqueue instead of fetch. On reconnect, syncQueue runs.
+
+```js
+// config.js — import from here, never from api.js inside hooks:
+// export const APPS_SCRIPT_URL = import.meta.env.VITE_APPS_SCRIPT_URL;
+// export const ORIGIN = window.location.origin;
+
+// Pattern for every POST function in api.js:
+// api.js imports from config.js (not from useOnlineStatus — avoids circular dependency)
+import { APPS_SCRIPT_URL, ORIGIN } from './config';
+import { getIsOnline } from './hooks/useOnlineStatus';
+import { enqueueRequest } from './offlineQueue';
+
+async function submitBooking(rawData) {
+  // Generate an idempotency key ONCE, before any send/queue attempt.
+  // This survives retries and multi-device sync — the server skips duplicates.
+  const data = { ...rawData, idempotencyKey: rawData.idempotencyKey || crypto.randomUUID() };
+
+  if (!getIsOnline()) {
+    const queueId = enqueueRequest('submitBooking', data);
+    return { success: true, queued: true, queueId, bookingId: 'PENDING-' + queueId };
+  }
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      // text/plain avoids CORS preflight. Apps Script reads e.postData.contents + JSON.parse().
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'submitBooking', origin: ORIGIN, ...data }),
+    });
+    return await res.json();
+  } catch (err) {
+    const queueId = enqueueRequest('submitBooking', data);
+    return { success: true, queued: true, queueId, bookingId: 'PENDING-' + queueId };
+  }
+}
+
+// GET functions — no queuing, graceful error:
+async function getTherapists() {
+  try {
+    const params = new URLSearchParams({ action: 'getTherapists', origin: ORIGIN });
+    const res = await fetch(APPS_SCRIPT_URL + '?' + params);
+    return await res.json();
+  } catch (err) {
+    return { success: false, error: 'No connection', cached: true };
+  }
+}
+
+// rawPost — used by syncQueue only. Throws on failure (syncQueue handles retries):
+export async function rawPost(action, data) {
+  const res = await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action, origin: ORIGIN, ...data }),
+  });
+  return await res.json();
+}
+```
+
+---
+
+### Offline i18n strings (add to i18n.js in both repos):
+
+```js
+connection: {
+  online:       { en: 'Connected',          ar: 'متصل'                    },
+  offline:      { en: 'Offline',            ar: 'غير متصل'                },
+  checking:     { en: 'Checking...',        ar: 'جاري الاتصال...'         },
+  syncing:      { en: 'Syncing...',         ar: 'جاري المزامنة...'        },
+  queued:       { en: '{n} items queued',   ar: '{n} عنصر في الانتظار'    },
+  syncDone:     { en: '{n} items synced',   ar: 'تمت مزامنة {n} عنصر'    },
+  syncFailed:   { en: 'Some items failed to sync', ar: 'فشلت مزامنة بعض العناصر' },
+  offlineNote:  { en: 'Your data is saved and will sync when you reconnect.',
+                  ar: 'تم حفظ بياناتك وستتم المزامنة عند الاتصال.' },
+}
+```
+
+---
+
+### Booking app — offline behavior:
+
+- Client submits booking → if offline → queued → confirmation screen shows:
+  "تم حفظ طلبك. سيُرسل عند الاتصال بالإنترنت." / "Request saved. Will be sent when connected."
+  Booking reference shows as "PENDING-[id]" until confirmed
+- When app comes back online → syncQueue runs → booking is actually submitted
+- If client closes the app before reconnecting: queue survives in localStorage
+  and will sync on next app open if internet is available
+
+### Admin app — offline behavior:
+
+- Read operations (loading tables, dashboard): show cached data if available,
+  show "Offline — showing cached data" banner, disable action buttons
+- Write operations (add transaction, add expense, confirm booking): queued
+  with a clear "Will sync when reconnected" toast
+- ConnectionBadge always visible in the corner
+- When reconnected: auto-sync runs, success toast shows count
+
+---
+
+## Backend Abstraction Layer & Migration Path
+
+**Core principle: `api.js` is the ONLY file that knows what the backend is.**
+Every page and component calls `api.js` functions. No component ever calls fetch()
+or knows about Apps Script, Google Sheets, action names, origin params, or text/plain.
+This is what makes the future move to a real database (Supabase) a swap, not a rewrite.
+
+### The data contract (must stay stable across backends)
+
+Every api.js function returns one consistent envelope shape:
+
+```js
+// SUCCESS:  { success: true,  data: <result>, error: null }
+// FAILURE:  { success: false, data: null,     error: 'message' }
+// QUEUED:   { success: true,  queued: true, queueId, ...optimistic fields }
+```
+
+Function signatures and their return `data` shape are the contract. As long as a new
+backend returns the same shapes, components never change. Examples:
+
+- `getTherapists()` → `{ success, data: Therapist[], error }`
+- `getAvailableSlots(therapistId, date)` → `{ success, data: string[], error }`
+- `submitBooking(data)` → `{ success, data: { bookingId }, error }`
+- `getTransactions(month, year)` → `{ success, data: { rows: Txn[], balance }, error }`
+
+### When you migrate to Supabase (Stage 3 — future)
+
+Google Sheets + Apps Script is the Stage 1 backend: zero cost, fine for low volume,
+good for launch. When the center grows (more sessions, more concurrent use, privacy/
+access-control needs), move to Supabase. To do this you ONLY rewrite the internals of
+`api.js` in both repos:
+
+1. Create a Supabase project (free tier: real Postgres + auth + row-level security).
+2. Recreate the 7 tabs as Postgres tables (same columns — the schema already maps 1:1).
+3. The Idempotency_Key columns become `UNIQUE` constraints → dedup is automatic via upsert.
+4. The computed `Balance` becomes a SQL window function or a view.
+5. Rewrite each api.js function to call `supabase.from('table')...` instead of fetch().
+   Keep the SAME function names and SAME return envelope. Components don't change.
+6. Replace the admin login (`verifyLogin`) with Supabase Auth.
+7. Row-level security replaces the origin/referrer check — real access control.
+8. Real-time: the admin "poll every 60s" can become a Supabase real-time subscription.
+
+Nothing in pages/, components/, hooks/, offlineQueue.js, or i18n.js changes.
+That is the entire point of routing everything through api.js.
+
+### To keep migration clean while building on Sheets — follow these now:
+
+- Never call fetch() outside api.js (Key Rule 12 already enforces this).
+- Never reference action names, origin, or text/plain outside api.js / config.js.
+- Always return the standard envelope shape from every api.js function.
+- Keep idempotency keys on every write — Supabase will reuse them as unique constraints.
+- Treat the offline queue as backend-agnostic: it stores { action, data, idempotencyKey }.
+  When the backend changes, only rawPost() inside api.js changes — the queue is untouched.
 
 ---
 
@@ -133,7 +485,7 @@ One row per booking request. Auto-ID format: B-2024-001
 | Client_Email      | Text     | Optional                                                   |
 | Session_Type      | Text     | Individual / Couples / Family / Group / Workshop           |
 | Session_Mode      | Text     | In-person / Online                                         |
-| Fee               | Number   | EGP — copied from Therapists tab at booking time           |
+| Fee               | Number   | EGP — looked up SERVER-SIDE from Therapists tab. Client-sent fee is ignored. |
 | Revenue_Therapist | Number   | Formula: Fee × (Revenue_Share_Pct / 100)                   |
 | Revenue_Center    | Number   | Formula: Fee − Revenue_Therapist                           |
 | Status            | Text     | Pending / Confirmed / Cancelled / Completed / No-show      |
@@ -142,6 +494,7 @@ One row per booking request. Auto-ID format: B-2024-001
 | Video_Link        | Text     | Optional — Daily.co room URL for online sessions           |
 | Reminder_Sent     | Boolean  | FALSE → TRUE after daily trigger fires                     |
 | Confirmed_At      | DateTime | Auto: set when admin confirms                              |
+| Idempotency_Key   | Text     | Client-generated UUID — Apps Script skips write if key already exists (dedup) |
 | Notes             | Text     | Admin-only notes                                           |
 
 ---
@@ -166,6 +519,8 @@ One row per therapist. Auto-ID format: T-001
 | Fee_Individual       | Number   | EGP                                            |
 | Fee_Couples          | Number   | EGP                                            |
 | Fee_Family           | Number   | EGP                                            |
+| Fee_Group            | Number   | EGP — price per person for Group sessions      |
+| Fee_Workshop         | Number   | EGP — total price for Workshop sessions        |
 | Working_Days         | Text     | Comma-separated: Sun,Mon,Tue,Wed,Thu            |
 | Start_Time           | Text     | e.g. 09:00                                     |
 | End_Time             | Text     | e.g. 17:00                                     |
@@ -207,9 +562,10 @@ Auto-ID format: TXN-2024-001
 | Sub_Category   | Text     | e.g. Revenue Share, Cleaning, Ads                                 |
 | Cash_In        | Number   | EGP — leave blank if outgoing                                     |
 | Cash_Out       | Number   | EGP — leave blank if incoming                                     |
-| Balance        | Number   | Formula: running total from row above                             |
+| Balance        | Number   | NOT stored — computed on read by Apps Script (avoids concurrency bugs). Leave column out of writes. |
 | Method         | Text     | Cash / Bank transfer                                              |
 | Booking_ID     | Text     | Optional — links to Bookings tab                                  |
+| Idempotency_Key| Text     | Client-generated UUID — Apps Script skips write if key already exists (dedup) |
 | Notes          | Text     |                                                                   |
 | Created_At     | DateTime | Auto                                                              |
 
@@ -230,6 +586,7 @@ Auto-ID format: EXP-2024-001
 | Actual_EGP   | Number | What was actually spent                                                    |
 | Variance     | Number | Formula: Actual_EGP − Expected_EGP                                         |
 | Paid_By      | Text   | Cash / Bank transfer                                                       |
+| Idempotency_Key | Text | Client-generated UUID — Apps Script skips write if key already exists (dedup) |
 | Notes        | Text   |                                                                            |
 
 ---
@@ -288,11 +645,23 @@ function checkOrigin(e) {
 }
 ```
 
+### Ping endpoint (for useOnlineStatus hook):
+The Apps Script must respond to action=ping:
+```js
+if (action === 'ping') {
+  return cors({ pong: true });
+}
+```
+This is used by the useOnlineStatus hook to verify real connectivity every 60 seconds.
+
+IMPORTANT: The Apps Script project timezone must be set to Africa/Cairo (Project Settings → Time zone). All date math and Utilities.formatDate() calls must pass 'Africa/Cairo'. A wrong timezone puts slots and reminders on the wrong day.
+
 ### GET endpoints (action parameter):
 | Action                   | Parameters           | Returns                                        |
 |--------------------------|----------------------|------------------------------------------------|
+| ping                     | —                    | { pong: true } — used by connection checker    |
 | getTherapists            | —                    | All active therapists (for client app)         |
-| getAvailableSlots        | therapistId, date    | Available time slots for that day              |
+| getAvailableSlots        | therapistId, date    | Available time slots for that day             |
 | getDashboardData         | month, year          | Revenue, expenses, session counts              |
 | getSessions              | month, year, therapistId (optional) | Session list with revenue split  |
 | getTransactions          | month, year          | Cash in/out log with running balance           |
@@ -316,14 +685,16 @@ function checkOrigin(e) {
 | markPayoutPaid   | Records payout as settled                            |
 | updateSettings   | Writes key-value to Settings tab                     |
 | updatePassword   | Writes new SHA-256 hash to Settings tab              |
+| verifyLogin      | Compares passwordHash server-side, returns success/fail — hash never sent to browser |
 
 ---
 
 ## Security Model
 
-- Apps Script URL: private — never committed in plain text if repo is public.
-  Store as: `const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_ID/exec";`
-  Replace YOUR_ID with actual ID before building.
+- Apps Script URL: stored in localStorage by the admin — never in any code file or GitHub.
+  In src/config.js: `export const APPS_SCRIPT_URL = localStorage.getItem('leen_script_url') || '';`
+  Admin enters the URL once in the Settings page → saved to localStorage → used from then on.
+  No .env files, no GitHub secrets, no env vars. URL is completely invisible in the codebase.
 - Apps Script referrer check: rejects requests not from GitHub Pages domain.
 - Admin app: SHA-256 password hashed in browser via Web Crypto API.
   Hash checked against Settings tab value on login.
@@ -346,16 +717,18 @@ function checkOrigin(e) {
 2. **Therapists** — Card list of active therapists. Filter pills by session type. Fee + mode badge on each card.
 3. **TherapistProfile** — Full bio (AR/EN), specialties, fees per session type, available days, Book button
 4. **SlotPicker** — Calendar (available days only). Time slot grid. Session type selector. In-person/Online toggle. Fee updates dynamically.
-5. **BookingForm** — Booking summary at top. Fields: Name (required), Phone (required), Email (optional), Notes (optional). Submit button.
-6. **Confirmation** — Success message. Booking summary. "We'll confirm within 24 hours." Center phone. "Add to calendar" link. "Book another" button.
-7. **InstallPrompt** — Small banner on second visit. "Add to home screen." Dismissable. Different instructions for iOS vs Android.
-8. **Offline** — Shown by service worker when no connection. Retry button. Center phone as fallback.
+5. **BookingForm** — Booking summary at top. Fields: Name (required), Phone (required), Email (optional), Notes (optional). Submit button. ConnectionBadge shown above submit button.
+6. **Confirmation** — Success message. Booking summary. "We'll confirm within 24 hours." Center phone. "Add to calendar" link. "Book another" button. If booking was queued offline, show a note explaining it will sync automatically.
+7. **InstallPrompt** — Small banner on second visit. "Add to home screen." Dismissable.
+8. **Offline** — Shown by service worker when no connection. Retry button.
 
 ### File Structure
 ```
 leen-booking/
   CLAUDE.md
   BUILD.md
+  .env.local          ← git-ignored — contains VITE_APPS_SCRIPT_URL for local dev
+  .gitignore          ← must include .env.local
   package.json
   vite.config.js
   tailwind.config.js
@@ -367,10 +740,15 @@ leen-booking/
       icon-192.png
       icon-512.png
   src/
-    main.jsx            ← React entry: HeroUIProvider + RouterProvider
+    config.js           ← APPS_SCRIPT_URL + ORIGIN — imported by api.js AND useOnlineStatus.js
+    index.css           ← Tailwind directives (@tailwind base/components/utilities)
+    main.jsx            ← React entry: I18nProvider + RouterProvider (HeroUI v3 has NO HeroUIProvider)
     App.jsx             ← Route definitions
-    api.js              ← All Apps Script fetch calls
-    i18n.js             ← All AR/EN translation strings
+    api.js              ← All Apps Script fetch calls + offline queue integration
+    i18n.js             ← All AR/EN translation strings (includes connection strings)
+    offlineQueue.js     ← Queue management: enqueue, sync, localStorage
+    hooks/
+      useOnlineStatus.js ← Real connectivity detection via ping (imports APPS_SCRIPT_URL from config.js)
     pages/
       Home.jsx
       Therapists.jsx
@@ -379,12 +757,14 @@ leen-booking/
       BookingForm.jsx
       Confirmation.jsx
     components/
-      TherapistCard.jsx   ← Used on Therapists page
-      SlotGrid.jsx        ← Used on SlotPicker page
-      LanguageToggle.jsx  ← EN/AR toggle button — used in all pages
-      InstallPrompt.jsx   ← PWA install banner
-      OfflineScreen.jsx   ← Shown by service worker
-      LoadingSpinner.jsx  ← HeroUI Spinner wrapper
+      TherapistCard.jsx
+      SlotGrid.jsx
+      LanguageToggle.jsx
+      InstallPrompt.jsx
+      OfflineScreen.jsx
+      LoadingSpinner.jsx
+      ConnectionBadge.jsx ← Connection status indicator
+      ThemeSelector.jsx
     assets/
       logo.svg
 ```
@@ -418,24 +798,26 @@ leen-booking/
 
 1. **Login** — Username + password. Error message on wrong credentials.
 2. **Dashboard** — Today's sessions count, today's revenue, pending bookings count. Pending booking cards with Confirm/Cancel buttons. Monthly revenue line chart (Recharts). Recent activity list. "Last backup: X days ago" reminder.
-3. **Sessions** — Full bookings table. Filters: therapist, date range, status, payment status. Per-row: confirm, cancel, mark paid actions. Revenue split (therapist / center) shown per row. Export to Excel.
-4. **CashFlow** — Transaction log table. Add transaction form (inline panel). Running balance always visible. Filter by category, method, month. Monthly totals summary. Export to Excel.
-5. **Expenses** — Expense log table. Add expense form. Expected vs actual per category. Monthly view selector. Category breakdown bar chart (Recharts). Flag over-budget categories in red. Export to Excel.
-6. **Payouts** — Per-therapist cards showing: total earned this month, paid out, pending. Sessions breakdown per therapist. Mark payout as settled. Payout history log. Export payout report.
-7. **TherapistMgmt** — Therapist list. Click to expand edit form per therapist. Fields: bio EN/AR, fees, working days, start/end time, revenue share %, session types, modes, active toggle. Block date form.
-8. **Clients** — Client directory table. Search by name or phone. Click row to expand: full session history, preferred therapist, admin notes, total sessions, last session date.
-9. **Reports** — Month/year selector. Generates: income statement (revenue vs expenses = net), year-to-date revenue chart. Export buttons: sessions Excel, expenses Excel, payout report Excel.
-10. **Settings** — Change password (old + new + confirm). Center info display. JSON backup button (downloads leen-backup-YYYY-MM-DD.json). Last backup date shown. Backup reminder if >7 days.
+3. **Sessions** — Full bookings table. Filters: therapist, date range, status, payment status. Per-row: confirm, cancel, mark paid actions. Revenue split shown per row. Export to Excel.
+4. **CashFlow** — Transaction log table. Add transaction form. Running balance always visible. Export to Excel.
+5. **Expenses** — Expense log table. Add expense form. Expected vs actual per category. Category breakdown bar chart. Flag over-budget in red. Export to Excel.
+6. **Payouts** — Per-therapist cards: total earned, paid out, pending. Mark payout as settled. Export payout report.
+7. **TherapistMgmt** — Therapist list. Edit form per therapist. Block date form.
+8. **Clients** — Client directory. Search by name or phone. Expand for full session history.
+9. **Reports** — Month/year selector. Income statement. Year-to-date chart. Export all.
+10. **Settings** — Change password. JSON backup. Theme selector. Language toggle.
 
 ### Responsive layout:
 - Desktop (≥768px): persistent left sidebar navigation, multi-column layouts, full tables
-- Mobile (<768px): top bar with page title, bottom tab navigation (thumb-friendly), single column, cards instead of wide tables
+- Mobile (<768px): top bar with page title, bottom tab navigation, single column, cards instead of wide tables
 
 ### File Structure
 ```
 leen-admin/
   CLAUDE.md
   BUILD.md
+  .env.local          ← git-ignored — contains VITE_APPS_SCRIPT_URL for local dev
+  .gitignore          ← must include .env.local
   package.json
   vite.config.js
   tailwind.config.js
@@ -447,11 +829,16 @@ leen-admin/
       icon-192.png
       icon-512.png
   src/
-    main.jsx            ← HeroUIProvider + RouterProvider
-    App.jsx             ← Routes — all wrapped in AuthGuard except /login
-    api.js              ← All Apps Script fetch calls
-    i18n.js             ← All AR/EN translation strings
-    auth.js             ← hashPassword(), login(), logout(), isAuthenticated()
+    config.js           ← APPS_SCRIPT_URL + ORIGIN — imported by api.js AND useOnlineStatus.js
+    index.css           ← Tailwind directives (@tailwind base/components/utilities)
+    main.jsx
+    App.jsx
+    api.js              ← All Apps Script calls + offline queue integration
+    i18n.js             ← All AR/EN strings (includes connection strings)
+    auth.js
+    offlineQueue.js     ← Queue management: enqueue, sync, localStorage
+    hooks/
+      useOnlineStatus.js ← Real connectivity detection via ping (imports APPS_SCRIPT_URL from config.js)
     pages/
       Login.jsx
       Dashboard.jsx
@@ -464,19 +851,23 @@ leen-admin/
       Reports.jsx
       Settings.jsx
     components/
-      AppShell.jsx        ← Wraps all protected pages. Renders Sidebar (desktop) or BottomNav+TopBar (mobile)
-      Sidebar.jsx         ← Desktop: vertical nav with icons + labels
-      BottomNav.jsx       ← Mobile: 5-tab bottom navigation
-      TopBar.jsx          ← Mobile: top bar with page title + logout icon
-      AuthGuard.jsx       ← Redirects to /login if not authenticated
-      StatCard.jsx        ← Reusable: icon + value + label tile
-      DataTable.jsx       ← Reusable: sortable, filterable table with pagination
-      RevenueChart.jsx    ← Recharts LineChart wrapper
-      ExpenseChart.jsx    ← Recharts BarChart wrapper
-      LanguageToggle.jsx  ← EN/AR toggle
-      LoadingSpinner.jsx  ← HeroUI Spinner wrapper
-      ConfirmModal.jsx    ← Reusable confirm dialog
-      BackupButton.jsx    ← Fetches backup data, triggers JSON download
+      AppShell.jsx
+      Sidebar.jsx
+      BottomNav.jsx
+      TopBar.jsx
+      AuthGuard.jsx
+      StatCard.jsx
+      DataTable.jsx
+      RevenueChart.jsx
+      ExpenseChart.jsx
+      LanguageToggle.jsx
+      LoadingSpinner.jsx
+      ConfirmModal.jsx
+      BackupButton.jsx
+      ConnectionBadge.jsx ← Connection status indicator (in TopBar + Sidebar)
+      ThemeSelector.jsx
+    utils/
+      excel.js
     assets/
       logo.svg
 ```
@@ -500,13 +891,25 @@ export const translations = {
     nav: { dashboard: "Dashboard", sessions: "Sessions", ... },
     actions: { confirm: "Confirm", cancel: "Cancel", save: "Save", ... },
     booking: { bookSession: "Book a Session", selectDate: "Select a date", ... },
-    // ... all strings
+    connection: {
+      online: "Connected", offline: "Offline", checking: "Checking...",
+      syncing: "Syncing...", queued: "{n} items queued",
+      syncDone: "{n} items synced", syncFailed: "Some items failed to sync",
+      offlineNote: "Your data is saved and will sync when you reconnect.",
+    },
+    // ... all other strings
   },
   ar: {
     nav: { dashboard: "الرئيسية", sessions: "الجلسات", ... },
     actions: { confirm: "تأكيد", cancel: "إلغاء", save: "حفظ", ... },
     booking: { bookSession: "احجز جلسة", selectDate: "اختر تاريخاً", ... },
-    // ... all strings
+    connection: {
+      online: "متصل", offline: "غير متصل", checking: "جاري الاتصال...",
+      syncing: "جاري المزامنة...", queued: "{n} عنصر في الانتظار",
+      syncDone: "تمت مزامنة {n} عنصر", syncFailed: "فشلت مزامنة بعض العناصر",
+      offlineNote: "تم حفظ بياناتك وستتم المزامنة عند الاتصال.",
+    },
+    // ... all other strings
   }
 }
 
@@ -540,6 +943,15 @@ async hashPassword(password) → SHA-256 hex string via Web Crypto API
 // Trigger file download
 downloadJSON(data, filename) → triggers browser download of .json file
 downloadExcel(workbook, filename) → SheetJS download
+
+// Theme functions
+applyTheme(theme), initTheme() — as defined in Theme System section
+
+// Visit counter (for install prompt)
+getVisitCount() → increments and returns visit count from localStorage
+
+// Calendar link generator
+generateCalendarLink(booking) → Google Calendar URL string
 ```
 
 ---
@@ -548,7 +960,7 @@ downloadExcel(workbook, filename) → SheetJS download
 
 1. Always read CLAUDE.md fully at the start of every session.
 2. Never hardcode display strings — always use the `t()` function from useI18n().
-3. Never hardcode the Apps Script URL — always use the `APPS_SCRIPT_URL` constant from api.js.
+3. Never hardcode the Apps Script URL — always import it from `src/config.js` which reads from localStorage key 'leen_script_url'. The URL is set once by the admin in the Settings page.
 4. Always handle loading states (HeroUI Spinner) and error states in every API call.
 5. Format all monetary values as "1,500 EGP" using formatCurrency() — always LTR direction.
 6. Use HeroUI components (Button, Card, Table, Input, Modal, Select…) — avoid raw HTML elements for UI.
@@ -559,6 +971,20 @@ downloadExcel(workbook, filename) → SheetJS download
 11. Never commit sensitive data, real names, or real phone numbers as test values.
 12. All API calls go through api.js — no fetch() calls directly in page components.
 13. Recharts and SheetJS are admin-only — do not import them in leen-booking.
+14. ALL POST functions in api.js must check isOnline before fetching — queue if offline.
+15. ALL GET functions in api.js must have try/catch and return a graceful error object if they fail.
+16. ConnectionBadge must be visible at all times — in TopBar (mobile admin), Sidebar (desktop admin), and BookingForm (booking app).
+17. Never let a failed network request crash the app silently — always show the user what happened.
+18. APPS_SCRIPT_URL lives only in src/config.js — imported from there by both api.js and useOnlineStatus.js. Never import it from api.js inside a hook (circular dependency).
+19. POST requests to Apps Script must use Content-Type: text/plain — never application/json. Apps Script reads body via e.postData.contents + JSON.parse().
+20. Never call getSettings from the browser to fetch the password hash. Login verification is server-side via verifyLogin action only.
+21. The Apps Script URL lives only in localStorage ('leen_script_url'). It is set via the Settings page. No GitHub secrets, no .env files, no env vars needed. If the URL is empty the app shows a setup prompt to the admin.
+22. Every api.js function returns the standard envelope: { success, data, error }. Components depend on this shape, never on backend specifics. This is the contract that makes the Supabase migration a swap.
+23. Every POST/write generates an idempotencyKey (crypto.randomUUID()) before sending OR queuing. The server skips the write if the key already exists. Prevents duplicates on retry and multi-device offline sync.
+24. The Balance in Transactions is computed on read by the backend — never written by the client and never stored as a column value during writes.
+25. React 19 + HeroUI v3: there is NO HeroUIProvider. Use I18nProvider from @heroui/react only to set the locale (ar-EG / en-US) for RTL. Components work without any provider.
+26. submitBooking validates the fee SERVER-SIDE from the Therapists tab — never trust the fee, Revenue_Therapist, or Revenue_Center sent by the client.
+27. The connectivity ping must bypass all caching (cache: 'no-store' + cache-buster query param) and be excluded from Workbox runtimeCaching — a cached pong while offline breaks offline detection.
 
 ---
 
@@ -629,4 +1055,4 @@ jobs:
 
 ### Next step:
 → Create Google Sheet with 7 tabs
-→ Then start leen-booking Stage 1-A
+→ Then start leen-admin Stage 8-A (admin first)

@@ -14,10 +14,15 @@
 1. Go to Google Drive → New → Google Sheets → name it "Leen Center — Backend"
 2. Create 7 tabs: Bookings, Therapists, Availability, Transactions, Expenses, Clients, Settings
 3. Add the column headers to each tab exactly as defined in CLAUDE.md
+   - NOTE: Bookings, Transactions, and Expenses tabs each include an Idempotency_Key column
+   - NOTE: the Transactions Balance column stays EMPTY — it is computed on read, never stored
 4. In the Settings tab, add the key-value rows defined in CLAUDE.md
 5. Add at least 2 sample therapists to the Therapists tab
 6. Go to Extensions → Apps Script → this opens the script editor (keep this tab open)
-7. You will deploy the Apps Script in Stage 7 after it is built
+7. In the Apps Script editor: Project Settings (gear icon) → set Time zone to
+   (GMT+02:00) Cairo / Africa/Cairo. CRITICAL: slot generation and the daily reminder
+   trigger use dates — a wrong project timezone puts bookings/reminders on the wrong day.
+8. You will deploy the Apps Script in Stage 7 after it is built
 
 ### Repo Setup (do this before each repo)
 1. Create a new GitHub repo (leen-booking then leen-admin — do them one at a time)
@@ -45,16 +50,18 @@ Read CLAUDE.md fully.
 Create package.json for the leen-booking React + Vite + HeroUI project.
 
 Include these exact dependencies:
-- react: ^18.3.0
-- react-dom: ^18.3.0
+- react: ^19.0.0   ← HeroUI v3 requires React 19
+- react-dom: ^19.0.0
 - react-router-dom: ^6.23.0
-- @heroui/react: ^2.4.0
+- @heroui/react: ^3.0.0   ← HeroUI v3
+- @heroui/styles: ^3.0.0   ← v3 styles package (paired with @heroui/react)
 - framer-motion: ^11.0.0
 
 Include these exact devDependencies:
 - vite: ^5.3.0
 - @vitejs/plugin-react: ^4.3.0
 - tailwindcss: ^4.0.0
+- @heroui/styles: ^3.0.0   ← required by HeroUI v3 (separate styles package)
 - vite-plugin-pwa: ^0.20.0
 - autoprefixer: ^10.4.0
 
@@ -86,9 +93,14 @@ Include:
     globPatterns: ['**/*.{js,css,html,ico,png,svg}']
     runtimeCaching for the Apps Script URL with NetworkFirst strategy,
     cacheName 'api-cache', expiration maxEntries 50, maxAgeSeconds 300
+    IMPORTANT: add a urlPattern exclusion (or a separate NetworkOnly rule) for any
+    request containing 'action=ping'. The ping must NEVER be served from cache —
+    a cached pong while offline would make useOnlineStatus falsely report 'online'.
 - base: '/leen-booking/' (required for GitHub Pages subdirectory hosting)
 - build output: dist folder
 - resolve alias: @ → /src
+- NOTE: no define block or env vars needed. The Apps Script URL is read from
+  localStorage at runtime, not from env vars. Simple and clean.
 ```
 
 ---
@@ -98,13 +110,18 @@ Include:
 ```
 Read CLAUDE.md fully.
 
-Create tailwind.config.js using the exact HeroUI theme configuration defined
-in the "HeroUI Theme — Leen Design System" section of CLAUDE.md.
+Create tailwind.config.js for leen-booking.
 
-Include:
-- content paths for index.html, src/**/*.{js,ts,jsx,tsx}, and HeroUI theme dist
-- heroui() plugin with the primary teal and secondary purple colors exactly as defined
-- darkMode: "class"
+HeroUI v3 uses Tailwind CSS v4 CSS-first configuration — no heroui() plugin needed.
+
+Content (minimal tailwind.config.js):
+  export default {
+    content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  };
+
+The theming is done in src/index.css using CSS variables.
+See the "HeroUI Theme — Leen Design System" section in CLAUDE.md for the
+6-theme CSS variable definitions to include in index.css.
 ```
 
 ---
@@ -160,21 +177,43 @@ Include:
 ## STAGE 2 — Core App Files
 ## ─────────────────────────────────────────
 
-### Step 2-A — src/api.js
+### Step 2-A — src/config.js
+
+```
+Read CLAUDE.md fully.
+
+Create src/config.js — the single source of truth for the Apps Script URL.
+
+This file must be created FIRST before api.js and useOnlineStatus.js,
+because both import from it. This breaks the circular dependency.
+
+Content:
+  // URL stored in localStorage by admin — never in code or GitHub
+  export const APPS_SCRIPT_URL = localStorage.getItem('leen_script_url') || '';
+  export const ORIGIN = window.location.origin;
+
+Also create/update .gitignore to include:
+  node_modules/
+  dist/
+
+No .env.local or GitHub secrets needed — the URL is set by the admin in the Settings page.
+```
+
+---
+
+### Step 2-B — src/api.js
 
 ```
 Read CLAUDE.md fully.
 
 Create src/api.js — all communication with the Google Apps Script backend.
 
-Define at the top:
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
-const ORIGIN = window.location.origin;
+Import APPS_SCRIPT_URL and ORIGIN from './config' at the top (not defined here).
 
-Implement these async functions (all include origin parameter in every request):
+Implement these async functions:
 
 getTherapists()
-— GET request with action=getTherapists
+— GET request: fetch(APPS_SCRIPT_URL + '?' + new URLSearchParams({ action:'getTherapists', origin:ORIGIN }))
 — Returns array of active therapist objects from Therapists tab
 — Each therapist: { id, nameEN, nameAR, titleEN, titleAR, bioEN, bioAR,
   specialties, sessionTypes, modes, languages, fees, workingDays,
@@ -183,7 +222,6 @@ getTherapists()
 getAvailableSlots(therapistId, date)
 — GET request with action=getAvailableSlots, therapistId, date (YYYY-MM-DD)
 — Returns array of available time strings: ["09:00", "10:00", "11:00"...]
-— Already excludes booked and blocked slots
 
 submitBooking(bookingData)
 — POST request with action=submitBooking
@@ -192,11 +230,30 @@ submitBooking(bookingData)
   revenueTherapist, revenueCenter, notes }
 — Returns { success: true, bookingId: "B-2024-001" } or { success: false, error: "..." }
 
-All functions:
-— Use try/catch and return { success: false, error: message } on failure
-— Pass origin: ORIGIN in every request body/params
-— Use JSON.stringify for POST bodies
-— Set Content-Type: application/json on POST requests
+All POST functions:
+— Generate an idempotencyKey (crypto.randomUUID()) once at the top, before send/queue:
+    const data = { ...rawData, idempotencyKey: rawData.idempotencyKey || crypto.randomUUID() };
+— Use Content-Type: text/plain (NOT application/json — text/plain avoids CORS preflight)
+— Apps Script reads body with JSON.parse(e.postData.contents)
+— Body: JSON.stringify({ action, origin: ORIGIN, ...data })
+— Return the standard envelope: { success, data, error } (see CLAUDE.md Backend Abstraction Layer)
+
+All GET functions:
+— Pass origin as a URL parameter
+— Return the standard envelope: { success, data, error } — { success: false, data: null, error, cached: true } on failure
+
+IMPORTANT: every function returns { success, data, error }. Components depend on this
+shape only — never on backend specifics. This is the contract for the future Supabase swap.
+
+Offline queue integration (IMPORTANT — read "Online / Offline System — Part 4" in CLAUDE.md):
+— Import getIsOnline from './hooks/useOnlineStatus'
+— Import enqueueRequest from './offlineQueue'
+— Every POST function must check getIsOnline() first:
+    if offline: call enqueueRequest(action, data) and return
+      { success: true, queued: true, queueId, bookingId: 'PENDING-' + queueId }
+    if fetch itself throws: also enqueue and return same shape
+— Also export: export async function rawPost(action, data) { ... }
+  rawPost uses text/plain Content-Type, throws on failure (syncQueue handles retries)
 ```
 
 ---
@@ -233,7 +290,7 @@ confirmation: successTitle, successMessage, bookingRef, therapist, date, time,
 type, mode, fee, confirmNote, callUs, bookAnother, addToCalendar
 
 general: loading, error, retry, offline, offlineMessage, callCenter,
-installPrompt, installBtn, dismiss, poweredBy
+installPrompt, installBtn, dismiss, poweredBy, chooseTheme
 
 Arabic translations must be complete — not placeholders.
 All center-specific text uses neutral phrasing suitable for a therapy center.
@@ -249,18 +306,20 @@ Read CLAUDE.md fully.
 Create src/main.jsx — React entry point for leen-booking.
 
 Include:
-- Import React, ReactDOM
-- Import HeroUIProvider from @heroui/react
+- Import React, ReactDOM (React 19 — createRoot from 'react-dom/client')
+- Import I18nProvider from @heroui/react (HeroUI v3 has NO HeroUIProvider)
 - Import RouterProvider, createBrowserRouter from react-router-dom
 - Import App from ./App.jsx
-- Import ./index.css (Tailwind base styles)
+- Import ./index.css (imports tailwindcss + @heroui/styles)
 
 Create the router with basename="/leen-booking/"
 
-Render:
-<HeroUIProvider>
+Read localStorage 'leen_lang' (default 'ar') to determine locale.
+
+Render (HeroUI v3 requires NO provider for components — only I18nProvider for RTL/locale):
+<I18nProvider locale={lang === 'ar' ? 'ar-EG' : 'en-US'}>
   <RouterProvider router={router} />
-</HeroUIProvider>
+</I18nProvider>
 
 Apply initial language direction on mount:
 Read localStorage 'leen_lang', default to 'ar'.
@@ -431,11 +490,212 @@ Visual:
 - Slot text: format as "10:00 AM" or "10:00 صباحاً" based on language
 ```
 
+### Step 3-D — src/components/ThemeSelector.jsx
+
+```
+Read CLAUDE.md fully.
+
+Create src/components/ThemeSelector.jsx — theme color palette switcher.
+
+Used on the Home screen in leen-booking and Settings page in leen-admin.
+
+Visual:
+- Row of 6 circular color swatches (40px each)
+- Colors: Teal (#0E9B73), Navy (#1B2A6B), Blue (#1A6ED8),
+  Green (#2E7D32), Red (#C62828), Purple (#6A1B9A)
+- Active swatch: white ring border around it
+- HeroUI Tooltip on each showing theme name in current language
+  (use THEME_LABELS from utils.js with current lang)
+- Clicking a swatch calls applyTheme(theme) from utils.js
+- On mount: call initTheme() to apply saved theme from localStorage
+
+Props:
+- showLabel: boolean (optional) — shows "Theme" label above swatches
+```
+
 ---
 
-## ─────────────────────────────────────────
-## STAGE 4 — Home & Browse Screens
-## ─────────────────────────────────────────
+### Step 3-E — src/utils.js (update — add theme functions)
+
+```
+Read CLAUDE.md fully.
+
+Update src/utils.js to add the theme system functions defined in the
+"Theme System" section of CLAUDE.md.
+
+Add:
+- THEMES array
+- THEME_LABELS object (EN and AR names for all 6 themes)
+- applyTheme(theme) function
+- initTheme() function
+
+Also call initTheme() at the bottom of utils.js so theme is applied
+immediately when the file loads.
+```
+
+---
+
+### Step 2-F — src/index.css
+
+```
+Read CLAUDE.md fully.
+
+Create src/index.css — Tailwind CSS entry file.
+
+Content (Tailwind v4 + HeroUI v3):
+  @import "tailwindcss";
+  @import "@heroui/styles";
+
+  /* Primary color — teal theme (default) */
+  :root {
+    --color-primary: oklch(0.62 0.15 162);
+    --color-primary-foreground: #ffffff;
+  }
+
+  /* All 6 theme overrides applied via data-theme attribute */
+  [data-theme="navy"]   { --color-primary: oklch(0.35 0.15 264); }
+  [data-theme="blue"]   { --color-primary: oklch(0.55 0.20 240); }
+  [data-theme="green"]  { --color-primary: oklch(0.45 0.15 145); }
+  [data-theme="red"]    { --color-primary: oklch(0.50 0.22 25);  }
+  [data-theme="purple"] { --color-primary: oklch(0.40 0.20 300); }
+
+This file replaces tailwind.config.js theming entirely.
+No heroui() plugin. No tailwind.config.js plugins array.
+Imported in src/main.jsx.
+```
+
+---
+
+### Step 2-G — src/hooks/useOnlineStatus.js
+
+```
+Read CLAUDE.md fully.
+
+Create src/hooks/useOnlineStatus.js — real connectivity detection hook.
+
+Read the "Online / Offline System — Part 1" section of CLAUDE.md fully before writing.
+
+Implement the useOnlineStatus() hook:
+
+State shape returned:
+  { isOnline: boolean, status: 'online'|'offline'|'checking', lastChecked: Date|null }
+
+Logic:
+- On mount: set status to 'checking', ping APPS_SCRIPT_URL with action=ping
+  If ping succeeds and returns { pong: true }: set isOnline=true, status='online'
+  If ping fails or times out: set isOnline=false, status='offline'
+- Listen to window 'online' event: immediately re-ping to confirm real connectivity
+- Listen to window 'offline' event: set isOnline=false, status='offline' immediately
+  (browser offline event is reliable for this direction)
+- Set up interval: ping every 60 seconds while component is mounted (keeps Apps Script quota usage low)
+- Clean up listeners and interval on unmount
+
+Export:
+  export function useOnlineStatus() { ... }
+  export function getIsOnline() { ... }   ← synchronous getter, reads from module-level variable
+  — getIsOnline() is used by api.js to check status before each POST request
+  — module-level variable is updated every time the hook sets isOnline state
+
+Ping implementation:
+  fetch(APPS_SCRIPT_URL + '?action=ping&origin=' + encodeURIComponent(ORIGIN) + '&t=' + Date.now(), {
+    method: 'GET',
+    cache: 'no-store',                 // never use HTTP cache for the ping
+    signal: AbortSignal.timeout(5000)  // 5 second timeout
+  })
+  The '&t=' + Date.now() cache-buster + cache:'no-store' ensure a real network round-trip.
+  Import APPS_SCRIPT_URL and ORIGIN from '../config.js' (NOT from api.js — avoids circular dependency)
+```
+
+---
+
+### Step 2-H — src/offlineQueue.js
+
+```
+Read CLAUDE.md fully.
+
+Create src/offlineQueue.js — offline write queue with localStorage persistence.
+
+Read the "Online / Offline System — Part 2" section of CLAUDE.md fully before writing.
+
+localStorage key: 'leen_offline_queue'
+
+Implement these exported functions:
+
+enqueueRequest(action, data)
+— Reads current queue from localStorage (parse JSON, default [])
+— data already contains an idempotencyKey (generated in api.js) — preserve it as-is
+— Creates item: { id: Date.now() + '-' + Math.random().toString(36).slice(2),
+    action, data, idempotencyKey: data.idempotencyKey,
+    queuedAt: new Date().toISOString(), retries: 0 }
+— If queue.length >= 50: do NOT add, return null (overflow protection)
+— Pushes item, saves back to localStorage as JSON string
+— Returns the item id
+— NOTE: because each queued write carries its idempotencyKey, syncing the same item
+  twice (or from two devices) is safe — the server dedups it.
+
+getQueue()
+— Reads and parses localStorage 'leen_offline_queue'
+— Returns [] if key missing or parse fails
+
+getQueueCount()
+— Returns getQueue().length
+
+clearQueue()
+— localStorage.removeItem('leen_offline_queue')
+
+removeFromQueue(id)
+— Filters out item with matching id, saves updated array
+
+async syncQueue(rawPostFn)
+— rawPostFn is imported from api.js: the rawPost(action, data) helper
+— Calls getQueue() to get all items
+— For each item in order:
+    try: result = await rawPostFn(item.action, item.data)
+    if result.success: removeFromQueue(item.id), increment synced count
+    else: increment item.retries in localStorage
+      if item.retries >= 3: removeFromQueue(item.id), increment failed count
+— Returns { synced: number, failed: number }
+```
+
+---
+
+### Step 3-F — src/components/ConnectionBadge.jsx
+
+```
+Read CLAUDE.md fully.
+
+Create src/components/ConnectionBadge.jsx — connection status indicator.
+
+Read the "Online / Offline System — Part 3" section of CLAUDE.md fully before writing.
+
+No props needed — reads state internally.
+
+Implement:
+- Call useOnlineStatus() to get { isOnline, status }
+- Call getQueueCount() to get pending item count
+- Track a local 'syncing' boolean state (true while syncQueue is running)
+
+Four visual states using HeroUI Chip component (size="sm"):
+  ONLINE:   color="success"  — small green dot + t('connection.online')
+            Only shown when isOnline=true AND queueCount===0
+  OFFLINE:  color="danger"   — warning icon + t('connection.offline')
+            + if queueCount > 0: show " — {n} " + t('connection.queued')
+  CHECKING: color="warning"  — HeroUI Spinner (xs) + t('connection.checking')
+  SYNCING:  color="primary"  — HeroUI Spinner (xs) + t('connection.syncing')
+
+Auto-sync behavior:
+- useEffect watching [isOnline]: when isOnline changes from false → true:
+  1. Set syncing=true
+  2. Call syncQueue(rawPost) imported from offlineQueue.js and api.js
+  3. On result:
+     if synced > 0: show HeroUI toast/alert success: t('connection.syncDone') with count
+     if failed > 0: show HeroUI toast/alert warning: t('connection.syncFailed')
+  4. Set syncing=false
+
+Keep the badge small and unobtrusive — it should not dominate the UI.
+```
+
+---
 
 ### Step 4-A — src/pages/Home.jsx
 
@@ -457,6 +717,9 @@ Structure (mobile-first, single column):
 Design must feel calming and professional — appropriate for a therapy center.
 Not clinical. Warm, trustworthy, clean.
 No heavy animations. Subtle fade-in on mount using Framer Motion.
+
+Include ThemeSelector component at the bottom of the page above the footer.
+Label: t('general.chooseTheme'). Allows clients to personalise the app color.
 ```
 
 ---
@@ -584,10 +847,16 @@ Structure:
   Disabled while submitting
 - Error handling: if API returns error, show HeroUI Alert danger below form
 
+ConnectionBadge component:
+- Import and render ConnectionBadge directly above the submit button
+- If offline (getIsOnline()===false): change submit button label to
+  t('connection.offlineNote') — still allow submit (it will queue)
+
 On submit:
 - Validate name and phone (show inline errors under fields)
 - Call api.submitBooking(bookingData)
-- On success: navigate to /confirmation with booking result + original state
+- On success (including queued=true): navigate to /confirmation
+  Pass queued: result.queued along with booking result + original state
 - On error: show error message, keep form filled
 ```
 
@@ -617,7 +886,16 @@ Structure:
   1. t('confirmation.addToCalendar') → opens Google Calendar link from utils.generateCalendarLink()
   2. t('confirmation.bookAnother') → navigates to /therapists
 
-Subtle confetti or success animation using Framer Motion on mount (tasteful, not excessive).
+Offline/queued state handling:
+- Check if incoming state includes queued: true
+- If queued: replace the success message with a slightly different message:
+  t('connection.offlineNote') — "Your request is saved and will be sent when you reconnect."
+  Replace the green checkmark with a clock/pending icon
+  Hide the "Add to Calendar" button (booking not yet confirmed server-side)
+  Show a small ConnectionBadge so they can see when it syncs
+- If not queued (normal online submission): show the standard success view with confetti
+
+Subtle confetti or success animation using Framer Motion on mount — only for online submissions.
 ```
 
 ---
@@ -680,13 +958,10 @@ Read CLAUDE.md fully.
 
 Create .github/workflows/deploy.yml for leen-booking.
 
-Use the exact GitHub Actions workflow defined in the
-"GitHub Actions — Auto Deploy" section of CLAUDE.md.
+Use the GitHub Actions workflow defined in the "GitHub Actions — Auto Deploy" section of CLAUDE.md.
 
-This workflow:
-- Triggers on push to main
-- Runs npm install and npm run build
-- Deploys the /dist folder to GitHub Pages
+No secrets or env vars needed — the Apps Script URL is stored in localStorage.
+The deploy.yml workflow just builds and deploys. No extra configuration required.
 ```
 
 ---
@@ -709,8 +984,13 @@ Implement the full script with:
 2. checkOrigin(e) function — validates request origin parameter
 
 3. doGet(e) — routes to correct GET handler based on e.parameter.action:
-   getTherapists, getAvailableSlots, getDashboardData (basic version returning empty for now),
-   backup
+   ping — returns cors({ pong: true }) — used by useOnlineStatus hook every 60 seconds
+   getTherapists, getAvailableSlots, getDashboardData (basic version returning empty for now), backup
+
+   NOTE: doPost parses the body with:
+     var body = JSON.parse(e.postData.contents);
+     var action = body.action;
+   This is correct for text/plain Content-Type. Do NOT use e.parameter for POST body.
 
 4. doPost(e) — routes to correct POST handler based on parsed body action:
    submitBooking, confirmBooking, cancelBooking
@@ -727,10 +1007,32 @@ Implement the full script with:
    - Return remaining available slot strings
 
 7. submitBooking(data) —
-   - Write new row to Bookings tab with auto-generated Booking_ID
-   - Check Clients tab for existing phone number — create new client row if not found
-   - Send email to ADMIN_EMAIL with booking details using MailApp.sendEmail()
-   - Return { success: true, bookingId }
+   - Use LockService to prevent double-bookings AND idempotency to prevent duplicate writes:
+     var lock = LockService.getScriptLock();
+     lock.tryLock(10000);  // wait up to 10 seconds
+     try {
+       // 1. Idempotency: if data.idempotencyKey already exists in Bookings tab,
+       //    return the existing booking's success (do NOT write again).
+       var existing = findByIdempotencyKey('Bookings', data.idempotencyKey);
+       if (existing) return cors({ success: true, data: { bookingId: existing.Booking_ID }, error: null });
+       // 2. Re-check slot availability INSIDE the lock (two clients may race)
+       var alreadyBooked = checkSlotTaken(data.therapistId, data.sessionDate, data.sessionTime);
+       if (alreadyBooked) return cors({ success: false, data: null, error: 'slot_taken' });
+       // 3. SERVER-SIDE FEE VALIDATION — never trust the client-sent fee.
+       //    Look up the real fee from the Therapists tab based on therapistId +
+       //    sessionType (Fee_Individual / Fee_Couples / Fee_Family / Fee_Group / Fee_Workshop).
+       //    Compute Revenue_Therapist and Revenue_Center from the therapist's Revenue_Share_Pct.
+       //    Ignore any fee/revenue values sent by the client.
+       // 4. Write new row to Bookings tab with auto-generated Booking_ID
+       //    Store data.idempotencyKey in the Idempotency_Key column.
+       //    Check Clients tab for existing phone — create new client row if not found.
+       //    Send email to ADMIN_EMAIL using MailApp.sendEmail().
+       return cors({ success: true, data: { bookingId: newId }, error: null });
+     } finally {
+       lock.releaseLock();
+     }
+   - Add a helper findByIdempotencyKey(tabName, key) that scans the Idempotency_Key
+     column and returns the matching row object or null. Reuse it for all writes.
 
 8. confirmBooking(data) —
    - Update Status to "Confirmed" and Confirmed_At timestamp in Bookings tab
@@ -747,11 +1049,20 @@ Implement the full script with:
     - Sends reminder email to each client who has an email address
     - Sets Reminder_Sent = TRUE
 
+10. verifyLogin(data) — NEW: server-side password verification
+   - Read ADMIN_USERNAME and ADMIN_PASSWORD_HASH from Settings tab
+   - Compare data.username === ADMIN_USERNAME and data.passwordHash === ADMIN_PASSWORD_HASH
+   - If match: return cors({ success: true })
+   - If no match: return cors({ success: false, error: 'Invalid credentials' })
+   - NEVER return the stored hash to the browser
+
 Instruction: After writing this code, paste it into the Apps Script editor,
 save it, then go to Deploy → New deployment → Web app →
 Execute as: Me, Who has access: Anyone → Deploy → copy the URL →
 paste it into src/api.js as APPS_SCRIPT_URL.
 Also set up the daily trigger: Triggers → Add trigger → sendReminders → Time-driven → Day timer → 8am-9am Cairo time.
+VERIFY the Apps Script project timezone is Africa/Cairo (Project Settings → Time zone).
+All Utilities.formatDate() and date math in the script must use 'Africa/Cairo' as the timezone argument.
 ```
 
 ---
@@ -762,6 +1073,11 @@ Also set up the daily trigger: Triggers → Add trigger → sendReminders → Ti
 Read CLAUDE.md fully.
 
 Perform a full QA pass on leen-booking. Fix any issues found.
+
+0. Environment setup:
+   - .env.local exists with correct VITE_APPS_SCRIPT_URL value
+   - Apps Script URL loads correctly (check in browser console: import.meta.env.VITE_APPS_SCRIPT_URL)
+   - GitHub Actions secret is set for production deploy
 
 1. Language toggle:
    - EN/AR switches on every page
@@ -797,6 +1113,18 @@ Perform a full QA pass on leen-booking. Fix any issues found.
    - Therapy card layout mirrors correctly in Arabic
    - Calendar navigation arrows flip in Arabic
    - Slot grid aligns correctly in Arabic
+
+7. Online / Offline system:
+   - ConnectionBadge shows "Connected" (green) when online
+   - Turn off Wi-Fi: badge switches to "Offline" within 60 seconds
+   - Submit a booking while offline:
+       Confirmation screen shows pending/clock state (not the success checkmark)
+       Queue count shows correctly in ConnectionBadge
+   - Turn Wi-Fi back on:
+       Badge switches to "Syncing..." automatically
+       After sync: shows "Connected" again
+       Booking actually appears in Google Sheet
+   - Refresh app with no internet: queue survives in localStorage
 ```
 
 ---
@@ -816,14 +1144,33 @@ Read CLAUDE.md fully.
 
 Create package.json for the leen-admin React + Vite + HeroUI project.
 
-Same dependencies as leen-booking PLUS these additional packages:
-- recharts: ^2.12.0 (for financial charts)
-- xlsx: ^0.18.5 (for Excel export via SheetJS)
-- date-fns: ^3.6.0 (for date manipulation in reports)
+dependencies:
+- react: ^19.0.0
+- react-dom: ^19.0.0
+- react-router-dom: ^6.23.0
+- @heroui/react: ^3.0.0
+- @heroui/styles: ^3.0.0
+- framer-motion: ^11.0.0
+- recharts: ^2.12.0        ← admin only: financial charts
+- xlsx: ^0.18.5            ← admin only: Excel export via SheetJS
+- date-fns: ^3.6.0         ← admin only: date manipulation in reports
 
-Same devDependencies as leen-booking.
+devDependencies:
+- vite: ^5.3.0
+- @vitejs/plugin-react: ^4.3.0
+- tailwindcss: ^4.0.0
+- @heroui/styles: ^3.0.0
+- vite-plugin-pwa: ^0.20.0
+- autoprefixer: ^10.4.0
+
+Scripts:
+- dev: vite
+- build: vite build
+- preview: vite preview
 
 Name: leen-admin
+Version: 1.0.0
+Private: true
 ```
 
 ---
@@ -835,9 +1182,21 @@ Read CLAUDE.md fully.
 
 Create vite.config.js for leen-admin.
 
-Same structure as leen-booking vite.config.js but with:
-- base: '/leen-admin/'
-- PWA workbox runtimeCaching for the Apps Script URL
+Include:
+- @vitejs/plugin-react plugin
+- vite-plugin-pwa plugin with these PWA options:
+  registerType: 'autoUpdate'
+  manifest: false (we use our own public/manifest.json)
+  workbox:
+    globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+    runtimeCaching for the Apps Script URL with NetworkFirst strategy,
+    cacheName 'api-cache', expiration maxEntries 50, maxAgeSeconds 300
+    IMPORTANT: add a NetworkOnly rule for any request containing 'action=ping'
+    so the ping is never served from cache (false online readings)
+- base: '/leen-admin/' (required for GitHub Pages subdirectory hosting)
+- build output: dist folder
+- resolve alias: @ → /src
+- NOTE: no define block needed — Apps Script URL is read from localStorage at runtime
 ```
 
 ---
@@ -849,8 +1208,15 @@ Read CLAUDE.md fully.
 
 Create tailwind.config.js for leen-admin.
 
-Identical to leen-booking tailwind.config.js — same HeroUI theme.
-Both apps share the same visual identity.
+HeroUI v3 uses Tailwind CSS v4 CSS-first configuration — no heroui() plugin needed.
+
+Content (minimal tailwind.config.js):
+  export default {
+    content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  };
+
+All theming is done via CSS variables in src/index.css.
+Do NOT add a plugins array or heroui() call — that is v2 syntax and will break v3.
 ```
 
 ---
@@ -860,13 +1226,18 @@ Both apps share the same visual identity.
 ```
 Read CLAUDE.md fully.
 
-Create index.html for leen-admin.
+Create index.html — the root HTML file for leen-admin.
 
-Same structure as leen-booking index.html but:
-- lang="ar" dir="rtl" default
+Include:
+- HTML5 boilerplate with lang="ar" dir="rtl" as default (Arabic first)
+- Viewport meta: width=device-width, initial-scale=1, maximum-scale=5
+- Theme color meta: #0E9B73
+- Link rel="manifest" href="/leen-admin/manifest.json"
+- Apple touch icon link
 - Title: "ليـن — لوحة التحكم"
-- manifest href: "/leen-admin/manifest.json"
-- theme-color: #0E9B73
+- Root div id="root"
+- Script type="module" src="/src/main.jsx"
+- No inline styles — clean and minimal
 ```
 
 ---
@@ -884,7 +1255,9 @@ Create public/manifest.json for leen-admin.
 - display: "standalone"
 - background_color: "#FFFFFF"
 - theme_color: "#0E9B73"
-- Same icon paths as leen-booking but pointing to /leen-admin/icons/
+- icons array:
+  { src: "/leen-admin/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" }
+  { src: "/leen-admin/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
 - orientation: "any" (admin works in landscape on tablet)
 ```
 
@@ -901,8 +1274,13 @@ Read CLAUDE.md fully.
 
 Create src/api.js for leen-admin — all Apps Script communication.
 
-Same APPS_SCRIPT_URL constant as leen-booking (same backend).
-Same ORIGIN constant and origin parameter on all requests.
+Import APPS_SCRIPT_URL and ORIGIN from './config.js' — never hardcode these.
+All POST requests use Content-Type: text/plain to avoid CORS preflight.
+Apps Script reads body via JSON.parse(e.postData.contents).
+Every function returns the standard envelope: { success, data, error }.
+Every POST generates an idempotencyKey (crypto.randomUUID()) before send/queue.
+Every function returns the standard envelope { success, data, error } — the contract
+that makes the future Supabase migration a swap (see CLAUDE.md Backend Abstraction Layer).
 
 Implement all admin API functions:
 
@@ -969,6 +1347,16 @@ updatePassword(newHash)
 — Returns { success: true }
 
 All functions include error handling as in leen-booking api.js.
+
+Offline queue integration (IMPORTANT — read "Online / Offline System — Part 4" in CLAUDE.md):
+— Import getIsOnline from './hooks/useOnlineStatus'
+— Import enqueueRequest from './offlineQueue'
+— Every POST function must:
+    1. Generate idempotencyKey: const data = { ...rawData, idempotencyKey: rawData.idempotencyKey || crypto.randomUUID() }
+    2. Check getIsOnline() — if offline: enqueueRequest(action, data) and return optimistic success
+    3. Try fetch with Content-Type: text/plain — if fetch throws: enqueue and return optimistic success
+— GET functions: try/catch, return { success: false, data: null, error, cached: true } on failure
+— Export rawPost(action, data) — bare fetch helper used by syncQueue, throws on failure
 ```
 
 ---
@@ -988,13 +1376,13 @@ async hashPassword(password)
 — Must match how the hash is stored in Settings tab
 
 async login(username, password)
-— Fetch current password hash from Settings tab via Apps Script
-  (GET action=getSettings returns Settings tab key-value pairs)
 — Hash the entered password using hashPassword()
-— Compare with stored hash
-— If match: store session token in sessionStorage key 'leen_admin_session'
+— POST to Apps Script with action=verifyLogin, body: { username, passwordHash }
+  Content-Type: text/plain — Apps Script verifies server-side (hash never comes to browser)
+— If { success: true }: store session token in sessionStorage key 'leen_admin_session'
   Token value: btoa(username + ':' + Date.now())
 — Return { success: true } or { success: false, error: 'Invalid credentials' }
+— NEVER call getSettings to fetch the hash to the browser — security risk
 
 logout()
 — sessionStorage.removeItem('leen_admin_session')
@@ -1016,8 +1404,20 @@ Read CLAUDE.md fully.
 
 Create src/i18n.js for leen-admin — all bilingual strings and useI18n hook.
 
-Same useI18n() hook structure as leen-booking i18n.js.
-Same localStorage key 'leen_lang'.
+Implement the useI18n() hook:
+  export function useI18n() {
+    const [lang, setLang] = useState(localStorage.getItem('leen_lang') || 'ar');
+    const t = (key) => key.split('.').reduce((obj, k) => obj?.[k], translations[lang]) || key;
+    const toggleLang = () => {
+      const nl = lang === 'ar' ? 'en' : 'ar';
+      setLang(nl);
+      localStorage.setItem('leen_lang', nl);
+      document.documentElement.dir = nl === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = nl;
+    };
+    return { t, lang, toggleLang };
+  }
+localStorage key: 'leen_lang'. Default: 'ar'.
 
 Translations must cover all strings across all 10 admin pages:
 
@@ -1054,10 +1454,140 @@ ytdChart, exportSessions, exportExpenses, exportPayouts, generating, downloadRea
 
 settings: title, changePassword, currentPassword, newPassword, confirmPassword,
 passwordMismatch, passwordChanged, centerInfo, backup, backupNow, lastBackup,
-backupDownloaded, neverBacked, daysSinceBackup
+backupDownloaded, neverBacked, daysSinceBackup, chooseTheme
 
 general: loading, error, retry, save, cancel, delete, edit, add, confirm,
 search, noResults, required, invalidEmail, success, close
+```
+
+---
+
+### Step 9-D — src/config.js (admin)
+
+```
+Read CLAUDE.md fully.
+
+Create src/config.js for leen-admin — the single source of truth for the Apps Script URL.
+
+Content:
+  // URL entered by admin in Settings page — never hardcoded in source code
+  export const APPS_SCRIPT_URL = localStorage.getItem('leen_script_url') || '';
+  export const ORIGIN = window.location.origin;
+
+This file is imported by BOTH api.js and hooks/useOnlineStatus.js.
+Never import APPS_SCRIPT_URL from api.js inside a hook — causes circular dependency.
+
+Also create/update .gitignore:
+  node_modules/
+  dist/
+
+No .env.local or GitHub secrets needed — URL comes from localStorage at runtime.
+```
+
+---
+
+### Step 9-E — src/index.css (admin)
+
+```
+Read CLAUDE.md fully.
+
+Create src/index.css for leen-admin — Tailwind v4 + HeroUI v3 entry file.
+
+Content:
+  @import "tailwindcss";
+  @import "@heroui/styles";
+
+  /* Default theme: teal */
+  :root {
+    --color-primary: oklch(0.62 0.15 162);
+    --color-primary-foreground: #ffffff;
+  }
+
+  /* 6 theme overrides applied via data-theme on <html> */
+  [data-theme="navy"]   { --color-primary: oklch(0.35 0.15 264); }
+  [data-theme="blue"]   { --color-primary: oklch(0.55 0.20 240); }
+  [data-theme="green"]  { --color-primary: oklch(0.45 0.15 145); }
+  [data-theme="red"]    { --color-primary: oklch(0.50 0.22 25);  }
+  [data-theme="purple"] { --color-primary: oklch(0.40 0.20 300); }
+
+This file is imported in src/main.jsx.
+This replaces tailwind.config.js theming entirely — no heroui() plugin.
+```
+
+---
+
+### Step 9-F — src/hooks/useOnlineStatus.js (admin)
+
+```
+Read CLAUDE.md fully.
+
+Create src/hooks/useOnlineStatus.js for leen-admin.
+
+Implement the useOnlineStatus() hook:
+
+State returned: { isOnline: boolean, status: 'online'|'offline'|'checking', lastChecked: Date|null }
+
+Logic:
+- On mount: set status='checking', ping APPS_SCRIPT_URL with action=ping
+  If ping returns { pong: true }: set isOnline=true, status='online'
+  If ping fails or times out (5s): set isOnline=false, status='offline'
+- Listen to window 'online' event: immediately re-ping to confirm
+- Listen to window 'offline' event: set isOnline=false, status='offline' immediately
+- Ping every 60 seconds while mounted (keeps Apps Script quota usage low)
+- Clean up listeners and interval on unmount
+
+Also export: export function getIsOnline() — synchronous getter reading a module-level
+variable that is updated whenever the hook sets isOnline state. Used by api.js.
+
+Ping implementation:
+  fetch(APPS_SCRIPT_URL + '?action=ping&origin=' + encodeURIComponent(ORIGIN) + '&t=' + Date.now(), {
+    method: 'GET',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(5000)
+  })
+Import APPS_SCRIPT_URL and ORIGIN from '../config.js' — NOT from api.js (avoids circular dependency)
+```
+
+---
+
+### Step 9-G — src/offlineQueue.js (admin)
+
+```
+Read CLAUDE.md fully.
+
+Create src/offlineQueue.js for leen-admin.
+
+localStorage key: 'leen_offline_queue'
+
+Queue item structure:
+{
+  id: string,             — unique queue ID (timestamp + random)
+  action: string,         — backend action name e.g. 'addTransaction'
+  data: object,           — full request body (already includes idempotencyKey)
+  idempotencyKey: string, — UUID generated in api.js before send/queue
+  queuedAt: string,       — ISO timestamp
+  retries: number,        — sync attempts failed (starts at 0)
+}
+
+Implement these exported functions:
+
+enqueueRequest(action, data)
+— data already contains idempotencyKey — preserve it
+— Creates queue item, pushes to localStorage array
+— Max 50 items (overflow protection) — return null if full
+— Returns item id
+
+getQueue() — parse and return localStorage array ([] if missing/corrupt)
+getQueueCount() — return getQueue().length
+clearQueue() — localStorage.removeItem('leen_offline_queue')
+removeFromQueue(id) — filter out by id, save updated array
+
+async syncQueue(rawPostFn)
+— rawPostFn is rawPost imported from api.js
+— For each item: try rawPostFn(item.action, item.data)
+  success → removeFromQueue(item.id), increment synced
+  failure → increment item.retries; if retries >= 3 → removeFromQueue (permanent fail)
+— Returns { synced: number, failed: number }
 ```
 
 ---
@@ -1189,10 +1719,21 @@ Read CLAUDE.md fully.
 Create src/main.jsx and src/App.jsx for leen-admin.
 
 main.jsx:
-- Same structure as leen-booking main.jsx
-- HeroUIProvider + RouterProvider
-- basename="/leen-admin/"
-- Apply initial language direction from localStorage
+- Import React, createRoot from 'react-dom/client'  (React 19)
+- Import I18nProvider from '@heroui/react'  (HeroUI v3 — NO HeroUIProvider, it does not exist)
+- Import RouterProvider, createBrowserRouter from 'react-router-dom'
+- Import App from './App.jsx'
+- Import './index.css'
+
+Read localStorage 'leen_lang' (default 'ar') for locale.
+Apply document.documentElement.dir and document.documentElement.lang on load.
+
+Render:
+  <I18nProvider locale={lang === 'ar' ? 'ar-EG' : 'en-US'}>
+    <RouterProvider router={router} />
+  </I18nProvider>
+
+Router basename="/leen-admin/" 
 
 App.jsx — define all routes:
 /login → Login (no AuthGuard)
@@ -1207,6 +1748,39 @@ App.jsx — define all routes:
 /reports → AuthGuard → AppShell title=reports → Reports
 /settings → AuthGuard → AppShell title=settings → Settings
 * → redirect to /dashboard
+```
+
+---
+
+### Step 10-G — src/components/ConnectionBadge.jsx (admin)
+
+```
+Read CLAUDE.md fully.
+
+Create src/components/ConnectionBadge.jsx for leen-admin.
+
+Create src/components/ConnectionBadge.jsx for leen-admin.
+
+Uses useOnlineStatus() and getQueueCount() — no props needed.
+
+Four visual states using HeroUI Chip (size="sm"):
+  ONLINE:   color="success"  — green dot + t('connection.online')
+            Only when isOnline=true AND queueCount===0
+  OFFLINE:  color="danger"   — warning icon + t('connection.offline')
+            + if queueCount > 0: show count + t('connection.queued')
+  CHECKING: color="warning"  — HeroUI Spinner (xs) + t('connection.checking')
+  SYNCING:  color="primary"  — HeroUI Spinner (xs) + t('connection.syncing')
+
+Auto-sync: when isOnline changes false → true:
+  1. Set syncing=true
+  2. Call syncQueue(rawPost) from offlineQueue.js + api.js
+  3. Show success/warning toast based on { synced, failed }
+  4. Set syncing=false
+
+Placement in admin app (different from booking app):
+- Mobile: render inside TopBar.jsx to the LEFT of the LanguageToggle
+- Desktop: render inside Sidebar.jsx at the VERY BOTTOM above the logout button
+After creating this component, update TopBar.jsx and Sidebar.jsx to import and use it.
 ```
 
 ---
@@ -1423,7 +1997,8 @@ Date | Description | Category | Cash In | Cash Out | Balance | Method | Notes
 
 Cash In cells: green text.
 Cash Out cells: red text.
-Balance column: always shows running total from API.
+Balance column: running total COMPUTED by the API (api.getTransactions returns
+{ rows, balance }). The client never calculates or stores the balance itself.
 
 Export button: downloads "Leen-Transactions-[Month]-[Year].xlsx"
 ```
@@ -1712,7 +2287,15 @@ Read CLAUDE.md fully.
 
 Create src/pages/Settings.jsx — admin settings page.
 
-Three sections:
+Four sections:
+
+0. Apps Script Setup (HeroUI Card) — shown prominently if localStorage 'leen_script_url' is empty:
+   - Label: "Backend URL" / "رابط النظام"
+   - HeroUI Input (type password so URL is hidden when typed)
+   - Save button → saves to localStorage key 'leen_script_url'
+   - Success message: "Connected" / "تم الاتصال"
+   - Once set: shows "✓ Backend connected" with a small edit button to change it
+   - This is the ONLY place the Apps Script URL is ever entered
 
 1. Change Password (HeroUI Card):
    - Current password (HeroUI Input password type)
@@ -1738,6 +2321,9 @@ Three sections:
    - Note: "To change center info, edit the Settings tab in Google Sheets directly"
 
 LanguageToggle prominent at top of page.
+
+ThemeSelector component below the language toggle — label t('settings.chooseTheme').
+Allows admin to personalise the dashboard color theme.
 ```
 
 ---
@@ -1751,14 +2337,23 @@ LanguageToggle prominent at top of page.
 ```
 Read CLAUDE.md fully.
 
-Create public/sw.js for leen-admin.
+Create public/sw.js — the service worker offline fallback for leen-admin.
 
-Same structure as leen-booking sw.js but with:
+Note: vite-plugin-pwa generates the main service worker automatically.
+This file handles the custom offline fallback page only.
+
+Implement:
 - Cache name: 'leen-admin-v1'
-- Offline fallback page shows admin-specific message
-- Note: admin app requires connection for all data — offline mode just shows
-  "No connection — reconnect to access the admin panel" message
-  and the center phone number
+- On install: cache the offline fallback HTML inline string
+- On fetch: for navigation requests that fail, serve the offline fallback
+
+The offline fallback must show (inline HTML string inside the sw.js):
+  - "ليـن — لوحة التحكم" heading
+  - Arabic + English message: "لا يوجد اتصال — أعد الاتصال للوصول إلى لوحة التحكم"
+    / "No connection — reconnect to access the admin panel"
+  - Note: unlike the booking app, the admin panel requires a live connection for all data
+  - Retry button that calls location.reload()
+  - Center phone number as fallback contact
 ```
 
 ---
@@ -1770,8 +2365,38 @@ Read CLAUDE.md fully.
 
 Create .github/workflows/deploy.yml for leen-admin.
 
-Identical to leen-booking deploy.yml — same GitHub Actions workflow.
-Builds and deploys /dist to GitHub Pages on every push to main.
+Use this exact workflow:
+
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm run build
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+No secrets or env vars needed in the build step — the Apps Script URL
+is stored in localStorage and set by the admin after first login.
 ```
 
 ---
@@ -1796,8 +2421,10 @@ getSessions(month, year, therapistId, status) —
   Return array of booking objects
 
 getTransactions(month, year) —
-  Read Transactions tab, filter by month/year
-  Return array with running balance calculation
+  Read Transactions tab, filter by month/year, sort by date ascending
+  Compute the running Balance on the fly (sum Cash_In - Cash_Out row by row).
+  Do NOT read a stored Balance column — it is computed here, never stored.
+  Return { success: true, data: { rows: [...], balance: finalBalance }, error: null }
 
 getExpenses(month, year) —
   Read Expenses tab, filter by Month column value "YYYY-MM"
@@ -1817,8 +2444,8 @@ backup() — read Transactions, Expenses, Bookings (completed only), and therapi
   Return combined JSON object
 
 Add to doPost() handler:
-addTransaction(data) — append row to Transactions tab, auto-update running Balance formula
-addExpense(data) — append row to Expenses tab, auto-populate Month column
+addTransaction(data) — check data.idempotencyKey via findByIdempotencyKey('Transactions', key) first; if exists, return success without writing. Otherwise append row WITHOUT a Balance column value (balance is computed on read). Store the idempotencyKey.
+addExpense(data) — check data.idempotencyKey via findByIdempotencyKey('Expenses', key) first; if exists, return success without writing. Otherwise append row, auto-populate Month column, store the idempotencyKey.
 markPaid(bookingId, method) — update Payment_Status and Payment_Method columns
 updateTherapist(data) — find row by Therapist_ID, update all columns
 blockDate(data) — append row to Availability tab
@@ -1882,6 +2509,19 @@ Perform full QA on leen-admin. Fix all issues found.
    - All POST requests update the sheet correctly
    - Email notifications send on booking submit/confirm/cancel
    - Daily reminder trigger is set up in Apps Script
+
+8. Online / Offline system:
+   - ConnectionBadge visible in Sidebar (desktop) and TopBar (mobile) at all times
+   - Shows "Connected" (green) when online
+   - Turn off Wi-Fi: badge switches to "Offline" within 60 seconds
+   - Add a transaction while offline:
+       Success toast shows "saved — will sync when reconnected"
+       Queue count updates in ConnectionBadge
+   - Turn Wi-Fi back on:
+       Badge switches to "Syncing..." automatically
+       Transaction appears in Google Sheet after sync
+   - Dashboard and tables show "Offline — showing cached data" banner when disconnected
+   - Action buttons (Confirm, Cancel, Mark Paid) are disabled when offline
 ```
 
 ---
@@ -1891,15 +2531,15 @@ Perform full QA on leen-admin. Fix all issues found.
 | Stage | Steps | Repo | Description |
 |-------|-------|------|-------------|
 | 1 | 5 steps | leen-booking | Foundation & Configuration |
-| 2 | 5 steps | leen-booking | Core App Files |
-| 3 | 4 steps | leen-booking | Shared Components |
+| 2 | 9 steps | leen-booking | Core App Files + config.js + index.css + Offline Queue + Status Hook |
+| 3 | 6 steps | leen-booking | Shared Components + ConnectionBadge |
 | 4 | 2 steps | leen-booking | Home & Browse Screens |
 | 5 | 2 steps | leen-booking | Profile & Slot Picker |
-| 6 | 2 steps | leen-booking | Booking Form & Confirmation |
-| 7 | 5 steps | leen-booking | PWA + Apps Script + Deploy |
+| 6 | 2 steps | leen-booking | Booking Form & Confirmation (offline-aware) |
+| 7 | 5 steps | leen-booking | PWA + Apps Script (with ping) + Deploy |
 | 8 | 5 steps | leen-admin | Admin Foundation |
-| 9 | 3 steps | leen-admin | Admin Core Files |
-| 10 | 6 steps | leen-admin | App Shell & Layout |
+| 9 | 7 steps | leen-admin | Admin Core Files + config.js + index.css + Offline Queue + Status Hook |
+| 10 | 7 steps | leen-admin | App Shell & Layout + ConnectionBadge |
 | 11 | 4 steps | leen-admin | Login & Dashboard |
 | 12 | 2 steps | leen-admin | Sessions Module |
 | 13 | 1 step  | leen-admin | Cash Flow Module |
@@ -1909,19 +2549,102 @@ Perform full QA on leen-admin. Fix all issues found.
 | 17 | 1 step  | leen-admin | Client Directory |
 | 18 | 2 steps | leen-admin | Reports & Export |
 | 19 | 2 steps | leen-admin | Settings & Backup |
-| 20 | 4 steps | leen-admin | PWA + Apps Script + Deploy + QA |
+| 20 | 4 steps | leen-admin | PWA + Apps Script (admin endpoints) + Deploy + QA |
 
-**Total: 60 focused prompts. Each = 1 file. Build leen-booking first (Stages 1–7), then leen-admin (Stages 8–20).**
+**Total: 70 focused prompts. Each = 1 file. Build leen-admin first (Stages 8–20), then leen-booking (Stages 1–7).**
+
+---
+
+## Appendix — Future Migration to Supabase (Stage 3, optional)
+
+Do NOT do this now. Build on Google Sheets first and launch. This is the roadmap for
+when the center outgrows Sheets (more volume, concurrent use, real access control).
+
+Because every backend call goes through api.js and returns the standard envelope
+{ success, data, error }, the migration only touches api.js internals in both repos.
+Pages, components, hooks, offlineQueue.js, and i18n.js stay untouched.
+
+### Migration steps (when you're ready):
+
+```
+1. Create a Supabase project (free tier: Postgres + Auth + Row-Level Security + Realtime).
+
+2. Recreate the 7 tabs as Postgres tables — the schema maps 1:1:
+   - Bookings, Therapists, Availability, Transactions, Expenses, Clients, Settings
+   - Make Idempotency_Key a UNIQUE column on Bookings, Transactions, Expenses
+     → duplicate writes are now rejected automatically by the database (upsert on conflict)
+   - Drop the stored Balance idea entirely — create a SQL view or window function for it
+
+3. In each repo, rewrite ONLY src/api.js:
+   - Replace fetch(APPS_SCRIPT_URL, ...) with supabase.from('table').select()/insert()/update()
+   - Keep EVERY function name identical
+   - Keep EVERY return shape identical: { success, data, error }
+   - rawPost() (used by offlineQueue) becomes a Supabase upsert keyed on idempotency_key
+
+4. Replace admin auth:
+   - verifyLogin → Supabase Auth (email/password or magic link)
+   - auth.js login()/logout()/isAuthenticated() keep the same signatures, new internals
+
+5. Replace the security model:
+   - The origin/referrer check → Supabase Row-Level Security policies (real access control)
+   - This is a genuine security upgrade over the Sheets approach
+
+6. Optional real-time upgrade:
+   - The admin "poll every 60s for pending bookings" can become a Supabase realtime
+     subscription — instant updates instead of polling. Only AppShell.jsx changes.
+
+7. Update config.js:
+   - Switch from localStorage 'leen_script_url' to localStorage 'leen_supabase_url' and 'leen_supabase_key'
+   - Admin enters the Supabase URL and anon key in the Settings page — same pattern
+   - APPS_SCRIPT_URL reference can be removed once fully migrated
+
+8. The offline queue keeps working unchanged — it stores { action, data, idempotencyKey }
+   and replays through the new rawPost(). The idempotency keys prevent duplicates exactly
+   as before.
+```
+
+### What does NOT change:
+- All pages and components (they only know api.js function names + envelope shape)
+- The offline/online system (useOnlineStatus, offlineQueue, ConnectionBadge)
+- i18n, theming, routing, PWA setup, GitHub Actions deploy
+
+That separation is the whole reason api.js is the only file allowed to call the backend.
 
 ---
 
 ## Tips
 
-- Start every Claude Code session with: "Read CLAUDE.md fully. We are working on [repo name]. Continue from Step [X]."
-- Run `npm run dev` at the start of each session to keep a local preview open.
-- Test in browser after every stage — not just at the end.
-- If a step produces an error: describe it to Claude Code and reference the step (e.g. "Fix Step 12-B, the Sessions table confirm button isn't calling the API").
-- The Apps Script (Step 7-D and 20-C) is the most complex — if something doesn't work, add Logger.log() statements and check Executions in the Apps Script editor.
+---
+
+### How to start every Claude Code session
+
+Open the Claude Code panel in VS Code and paste this exactly — replace the bracketed parts:
+
+```
+Read CLAUDE.md fully. We are working on leen-admin. Continue from Step [X].
+Use HeroUI v3 docs at https://heroui.com/docs for all component APIs.
+```
+
+Replace `leen-admin` with `leen-booking` when working on the booking app.
+Replace `[X]` with the step number you are continuing from (e.g. `8-A` for the first session).
+
+---
+
+### How to report an error to Claude Code
+
+If a step produces an error, paste this — fill in the step number and describe what went wrong:
+
+```
+Fix Step [X]. [Describe what happened — e.g. "the Sessions table confirm button isn't calling the API"].
+```
+
+---
+
+### General tips
+
+- Run `npm run dev` at the start of each session to keep a local preview open at localhost:5173.
+- Test in the browser after every stage — not just at the end.
+- The Apps Script (Steps 7-D and 20-C) is the most complex part. If something doesn't work, add `Logger.log()` statements inside the script and check Executions in the Apps Script editor.
 - Keep the Google Sheet open in a browser tab while testing — you can see data being written in real time.
 - After completing each stage, push to GitHub to keep your work backed up.
-- Update CLAUDE.md "Current State" section after each completed stage.
+- Update the "Current State" section in CLAUDE.md after each completed stage.
