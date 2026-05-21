@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Input, Spinner } from '@heroui/react';
+import { Button, Card, Input, Label, Spinner } from '@heroui/react';
 import { login, isAuthenticated } from '../auth';
 import { useI18n } from '../i18n';
 import LanguageToggle from '../components/LanguageToggle';
@@ -49,35 +49,43 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <Input
-                label={t('login.username')}
-                value={username}
-                onValueChange={setUsername}
-                isRequired
-                autoComplete="username"
-                isDisabled={loading}
-              />
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="username">{t('login.username')}</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  autoComplete="username"
+                  disabled={loading}
+                />
+              </div>
 
-              <Input
-                label={t('login.password')}
-                type={showPwd ? 'text' : 'password'}
-                value={password}
-                onValueChange={setPassword}
-                isRequired
-                autoComplete="current-password"
-                isDisabled={loading}
-                endContent={
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="password">{t('login.password')}</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPwd ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    disabled={loading}
+                    className="pe-10"
+                  />
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
-                    className="text-default-400 text-lg leading-none focus:outline-none"
+                    className="absolute inset-y-0 end-2 flex items-center text-default-400 text-lg focus:outline-none"
                     tabIndex={-1}
                     aria-label={showPwd ? 'Hide password' : 'Show password'}
                   >
                     {showPwd ? '🙈' : '👁️'}
                   </button>
-                }
-              />
+                </div>
+              </div>
 
               {error && (
                 <div role="alert" className="text-sm text-danger bg-danger-50 border border-danger-200 rounded-lg px-3 py-2">
@@ -87,12 +95,11 @@ export default function Login() {
 
               <Button
                 type="submit"
-                color="primary"
-                fullWidth
+                variant="primary"
+                className="w-full"
                 isDisabled={loading || !username || !password}
-                startContent={loading ? <Spinner size="sm" color="white" /> : undefined}
               >
-                {loading ? t('general.loading') : t('login.signIn')}
+                {loading ? <><Spinner size="sm" /> {t('general.loading')}</> : t('login.signIn')}
               </Button>
             </form>
           </Card.Content>
