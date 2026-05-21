@@ -12,10 +12,6 @@ async function get(action, params = {}) {
   return res.json();
 }
 
-function makeEnvelope(data) {
-  return { success: true, data, error: null };
-}
-
 function errorEnvelope(message) {
   return { success: false, data: null, error: message, cached: true };
 }
@@ -55,8 +51,7 @@ async function post(action, rawData) {
 
 export async function getDashboardData(month, year) {
   try {
-    const raw = await get('getDashboardData', { month, year });
-    return makeEnvelope(raw);
+    return await get('getDashboardData', { month, year });
   } catch {
     return errorEnvelope('Failed to load dashboard data');
   }
@@ -73,8 +68,7 @@ export async function getSessions(filters = {}) {
   if (status) params.status = status;
 
   try {
-    const raw = await get('getSessions', params);
-    return makeEnvelope(raw);
+    return await get('getSessions', params);
   } catch {
     return errorEnvelope('Failed to load sessions');
   }
@@ -86,8 +80,7 @@ export async function getSessions(filters = {}) {
 
 export async function getTransactions(month, year) {
   try {
-    const raw = await get('getTransactions', { month, year });
-    return makeEnvelope(raw);
+    return await get('getTransactions', { month, year });
   } catch {
     return errorEnvelope('Failed to load transactions');
   }
@@ -99,8 +92,7 @@ export async function getTransactions(month, year) {
 
 export async function getExpenses(month, year) {
   try {
-    const raw = await get('getExpenses', { month, year });
-    return makeEnvelope(raw);
+    return await get('getExpenses', { month, year });
   } catch {
     return errorEnvelope('Failed to load expenses');
   }
@@ -112,8 +104,7 @@ export async function getExpenses(month, year) {
 
 export async function getPayouts(month, year) {
   try {
-    const raw = await get('getPayouts', { month, year });
-    return makeEnvelope(raw);
+    return await get('getPayouts', { month, year });
   } catch {
     return errorEnvelope('Failed to load payouts');
   }
@@ -125,8 +116,7 @@ export async function getPayouts(month, year) {
 
 export async function getClients() {
   try {
-    const raw = await get('getClients');
-    return makeEnvelope(raw);
+    return await get('getClients');
   } catch {
     return errorEnvelope('Failed to load clients');
   }
@@ -138,8 +128,7 @@ export async function getClients() {
 
 export async function getTherapistsFull() {
   try {
-    const raw = await get('getTherapistsFull');
-    return makeEnvelope(raw);
+    return await get('getTherapistsFull');
   } catch {
     return errorEnvelope('Failed to load therapists');
   }
@@ -151,8 +140,7 @@ export async function getTherapistsFull() {
 
 export async function backup() {
   try {
-    const raw = await get('backup');
-    return makeEnvelope(raw);
+    return await get('backup');
   } catch {
     return errorEnvelope('Failed to generate backup');
   }
