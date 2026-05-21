@@ -1,12 +1,20 @@
 import { useState } from 'react';
-import { Button, Input, Label, ListBox, Modal, Select, Spinner, TextArea } from '@heroui/react';
+import { Button, Modal, Spinner } from '@heroui/react';
 import { addTransaction } from '../api';
 import { useI18n } from '../i18n';
 
 const CATEGORIES = ['Revenue', 'Salary', 'Rent', 'Marketing', 'Admin', 'Initial_Cost', 'Other'];
 const METHODS    = ['Cash', 'Bank transfer'];
 const TODAY      = new Date().toISOString().slice(0, 10);
-const BLANK = { date: TODAY, description: '', category: 'Revenue', subCategory: '', cashIn: '', cashOut: '', method: 'Cash', notes: '' };
+const BLANK      = { date: TODAY, description: '', category: 'Revenue', subCategory: '', cashIn: '', cashOut: '', method: 'Cash', notes: '' };
+
+const F = {
+  display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
+  borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
+  backgroundColor: '#ffffff', color: '#111827', fontSize: '16px',
+  marginBottom: '8px', boxSizing: 'border-box',
+};
+const LBL = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' };
 
 export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
   const { t } = useI18n();
@@ -23,9 +31,12 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
     if ((cashIn > 0) === (cashOut > 0)) { setError('Enter Cash In OR Cash Out — not both, not neither.'); return; }
     setError('');
     setSaving(true);
-    const result = await addTransaction({ date: form.date, description: form.description,
+    const result = await addTransaction({
+      date: form.date, description: form.description,
       category: form.category, subCategory: form.subCategory,
-      cashIn: cashIn || null, cashOut: cashOut || null, method: form.method, notes: form.notes });
+      cashIn: cashIn || null, cashOut: cashOut || null,
+      method: form.method, notes: form.notes,
+    });
     setSaving(false);
     if (result.success) { setForm(BLANK); onSuccess(); onClose(); }
     else setError(result.error || t('general.error'));
@@ -36,38 +47,68 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
       <Modal.Container>
         <Modal.Dialog>
           <Modal.Header>{t('cashflow.addTransaction')}</Modal.Header>
-          <Modal.Body className="flex flex-col gap-3">
-            <div className="flex gap-2">
-              <Input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} className="flex-1" />
-              <Select selectedKey={form.method} onSelectionChange={(k) => set('method', k)} className="flex-1">
-                <Label>{t('cashflow.method')}</Label>
-                <ListBox>{METHODS.map((m) => <ListBox.Item id={m} key={m}>{m}</ListBox.Item>)}</ListBox>
-              </Select>
+          <Modal.Body className="flex flex-col gap-1">
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={LBL}>{t('sessions.date')}</label>
+                <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} style={F} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={LBL}>{t('cashflow.method')}</label>
+                <select value={form.method} onChange={(e) => set('method', e.target.value)} style={F}>
+                  {METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
             </div>
-            <Input label={t('cashflow.description')} value={form.description}
-              onValueChange={(v) => set('description', v)} isRequired />
-            <div className="flex gap-2">
-              <Select selectedKey={form.category} onSelectionChange={(k) => set('category', k)} className="flex-1">
-                <Label>{t('cashflow.category')}</Label>
-                <ListBox>{CATEGORIES.map((c) => <ListBox.Item id={c} key={c}>{c}</ListBox.Item>)}</ListBox>
-              </Select>
-              <Input label="Sub-category" value={form.subCategory}
-                onValueChange={(v) => set('subCategory', v)} className="flex-1" />
+
+            <div>
+              <label style={LBL}>{t('cashflow.description')} *</label>
+              <input value={form.description} onChange={(e) => set('description', e.target.value)}
+                required style={F} />
             </div>
-            <div className="flex gap-2">
-              <Input type="number" min="0" label={`${t('cashflow.cashIn')} (EGP)`}
-                value={form.cashIn} onValueChange={(v) => set('cashIn', v)} className="flex-1" />
-              <Input type="number" min="0" label={`${t('cashflow.cashOut')} (EGP)`}
-                value={form.cashOut} onValueChange={(v) => set('cashOut', v)} className="flex-1" />
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={LBL}>{t('cashflow.category')}</label>
+                <select value={form.category} onChange={(e) => set('category', e.target.value)} style={F}>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={LBL}>Sub-category</label>
+                <input value={form.subCategory} onChange={(e) => set('subCategory', e.target.value)} style={F} />
+              </div>
             </div>
-            <TextArea value={form.notes} onChange={(e) => set('notes', e.target.value)} rows={2} placeholder={t('sessions.payment')} />
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={LBL}>{t('cashflow.cashIn')} (EGP)</label>
+                <input type="number" min="0" value={form.cashIn}
+                  onChange={(e) => set('cashIn', e.target.value)} style={F} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={LBL}>{t('cashflow.cashOut')} (EGP)</label>
+                <input type="number" min="0" value={form.cashOut}
+                  onChange={(e) => set('cashOut', e.target.value)} style={F} />
+              </div>
+            </div>
+
+            <div>
+              <label style={LBL}>Notes</label>
+              <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
+                rows={2} style={{ ...F, resize: 'vertical' }} />
+            </div>
+
             {error && <p className="text-sm text-danger">{error}</p>}
           </Modal.Body>
           <Modal.Footer>
             <Button variant="flat" onPress={onClose}>{t('general.cancel')}</Button>
             <Button color="primary" isDisabled={saving}
               startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
-              onPress={handleSave}>{t('general.save')}</Button>
+              onPress={handleSave}>
+              {t('general.save')}
+            </Button>
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>

@@ -1,12 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Button, Input, Label, ListBox, Modal, Select, Spinner, Switch, Tabs, TextArea } from '@heroui/react';
+import { Button, Modal, Spinner, Switch, Label, Tabs } from '@heroui/react';
 import { updateTherapist, blockDate } from '../api';
 import { useI18n } from '../i18n';
 
-const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const TYPES  = ['Individual', 'Couples', 'Family', 'Group', 'Workshop'];
-const MODES  = ['In-person', 'Online', 'Both'];
-const TODAY  = new Date().toISOString().slice(0, 10);
+const DAYS  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TYPES = ['Individual', 'Couples', 'Family', 'Group', 'Workshop'];
+const MODES = ['In-person', 'Online', 'Both'];
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const F = {
+  display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
+  borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
+  backgroundColor: '#ffffff', color: '#111827', fontSize: '16px',
+  marginBottom: '8px', boxSizing: 'border-box',
+};
+const LBL = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' };
+
+function Field({ label, children }) {
+  return (
+    <div>
+      {label && <label style={LBL}>{label}</label>}
+      {children}
+    </div>
+  );
+}
 
 function initForm(th) {
   return {
@@ -27,9 +44,9 @@ function CheckPill({ label, checked, onChange }) {
 
 export default function TherapistEditModal({ therapist, isOpen, onClose, onSuccess }) {
   const { t } = useI18n();
-  const [form, setForm]         = useState(() => initForm(therapist));
-  const [saving, setSaving]     = useState(false);
-  const [block, setBlock]       = useState({ date: TODAY, timeStart: '', timeEnd: '', reason: '' });
+  const [form, setForm]               = useState(() => initForm(therapist));
+  const [saving, setSaving]           = useState(false);
+  const [block, setBlock]             = useState({ date: TODAY, timeStart: '', timeEnd: '', reason: '' });
   const [blockSaving, setBlockSaving] = useState(false);
 
   useEffect(() => { setForm(initForm(therapist)); }, [therapist, isOpen]);
@@ -77,18 +94,38 @@ export default function TherapistEditModal({ therapist, isOpen, onClose, onSucce
               </Tabs.ListContainer>
 
               <Tabs.Panel id="info">
-                <div className="flex flex-col gap-3 pt-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input label={`${t('therapistMgmt.name')} EN`} value={form.Name_EN || ''} onValueChange={(v) => set('Name_EN', v)} />
-                    <Input label={`${t('therapistMgmt.name')} AR`} value={form.Name_AR || ''} onValueChange={(v) => set('Name_AR', v)} />
-                    <Input label={`${t('therapistMgmt.title2')} EN`} value={form.Title_EN || ''} onValueChange={(v) => set('Title_EN', v)} />
-                    <Input label={`${t('therapistMgmt.title2')} AR`} value={form.Title_AR || ''} onValueChange={(v) => set('Title_AR', v)} />
+                <div className="flex flex-col gap-1 pt-3">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <Field label={`${t('therapistMgmt.name')} EN`}>
+                      <input value={form.Name_EN || ''} onChange={(e) => set('Name_EN', e.target.value)} style={F} />
+                    </Field>
+                    <Field label={`${t('therapistMgmt.name')} AR`}>
+                      <input value={form.Name_AR || ''} onChange={(e) => set('Name_AR', e.target.value)} style={F} />
+                    </Field>
+                    <Field label={`${t('therapistMgmt.title2')} EN`}>
+                      <input value={form.Title_EN || ''} onChange={(e) => set('Title_EN', e.target.value)} style={F} />
+                    </Field>
+                    <Field label={`${t('therapistMgmt.title2')} AR`}>
+                      <input value={form.Title_AR || ''} onChange={(e) => set('Title_AR', e.target.value)} style={F} />
+                    </Field>
                   </div>
-                  <Input label={t('therapistMgmt.photoUrl')} value={form.Photo_URL || ''} onValueChange={(v) => set('Photo_URL', v)} />
-                  <TextArea value={form.Bio_EN || ''} onChange={(e) => set('Bio_EN', e.target.value)} rows={3} placeholder={`${t('therapistMgmt.bio')} EN`} />
-                  <TextArea value={form.Bio_AR || ''} onChange={(e) => set('Bio_AR', e.target.value)} rows={3} placeholder={`${t('therapistMgmt.bio')} AR`} />
-                  <Input label={t('therapistMgmt.specialties')} value={form.Specialties || ''} onValueChange={(v) => set('Specialties', v)} />
-                  <Input label="Languages" value={form.Languages || ''} onValueChange={(v) => set('Languages', v)} />
+                  <Field label={t('therapistMgmt.photoUrl')}>
+                    <input value={form.Photo_URL || ''} onChange={(e) => set('Photo_URL', e.target.value)} style={F} />
+                  </Field>
+                  <Field label={`${t('therapistMgmt.bio')} EN`}>
+                    <textarea value={form.Bio_EN || ''} onChange={(e) => set('Bio_EN', e.target.value)}
+                      rows={3} style={{ ...F, resize: 'vertical' }} />
+                  </Field>
+                  <Field label={`${t('therapistMgmt.bio')} AR`}>
+                    <textarea value={form.Bio_AR || ''} onChange={(e) => set('Bio_AR', e.target.value)}
+                      rows={3} style={{ ...F, resize: 'vertical' }} />
+                  </Field>
+                  <Field label={t('therapistMgmt.specialties')}>
+                    <input value={form.Specialties || ''} onChange={(e) => set('Specialties', e.target.value)} style={F} />
+                  </Field>
+                  <Field label="Languages">
+                    <input value={form.Languages || ''} onChange={(e) => set('Languages', e.target.value)} style={F} />
+                  </Field>
                   <Switch isSelected={!!form.Active} onValueChange={(v) => set('Active', v)}>
                     <Label>{form.Active ? t('therapistMgmt.active') : t('therapistMgmt.inactive')}</Label>
                   </Switch>
@@ -100,48 +137,78 @@ export default function TherapistEditModal({ therapist, isOpen, onClose, onSucce
                   <div>
                     <p className="text-sm text-default-500 mb-2">{t('sessions.type')}</p>
                     <div className="flex flex-wrap gap-2">
-                      {TYPES.map((tp) => <CheckPill key={tp} label={tp} checked={form.sessionTypes.includes(tp)} onChange={() => toggleArr('sessionTypes', tp)} />)}
+                      {TYPES.map((tp) => (
+                        <CheckPill key={tp} label={tp}
+                          checked={form.sessionTypes.includes(tp)}
+                          onChange={() => toggleArr('sessionTypes', tp)} />
+                      ))}
                     </div>
                   </div>
-                  <Select selectedKey={form.Modes || 'Both'} onSelectionChange={(k) => set('Modes', k)}>
-                    <Label>{t('therapistMgmt.modes')}</Label>
-                    <ListBox>{MODES.map((m) => <ListBox.Item id={m} key={m}>{m}</ListBox.Item>)}</ListBox>
-                  </Select>
+                  <Field label={t('therapistMgmt.modes')}>
+                    <select value={form.Modes || 'Both'} onChange={(e) => set('Modes', e.target.value)} style={F}>
+                      {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </Field>
                   <div>
                     <p className="text-sm text-default-500 mb-2">{t('therapistMgmt.workingDays')}</p>
                     <div className="flex flex-wrap gap-2">
-                      {DAYS.map((d) => <CheckPill key={d} label={d} checked={form.workingDays.includes(d)} onChange={() => toggleArr('workingDays', d)} />)}
+                      {DAYS.map((d) => (
+                        <CheckPill key={d} label={d}
+                          checked={form.workingDays.includes(d)}
+                          onChange={() => toggleArr('workingDays', d)} />
+                      ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input type="time" label={t('therapistMgmt.startTime')} value={form.Start_Time || ''} onValueChange={(v) => set('Start_Time', v)} />
-                    <Input type="time" label={t('therapistMgmt.endTime')}   value={form.End_Time   || ''} onValueChange={(v) => set('End_Time', v)} />
-                    <Input type="number" label={t('therapistMgmt.duration')} value={String(form.Session_Duration_Min || 50)} onValueChange={(v) => set('Session_Duration_Min', Number(v))} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <Field label={t('therapistMgmt.startTime')}>
+                      <input type="time" value={form.Start_Time || ''} onChange={(e) => set('Start_Time', e.target.value)} style={F} />
+                    </Field>
+                    <Field label={t('therapistMgmt.endTime')}>
+                      <input type="time" value={form.End_Time || ''} onChange={(e) => set('End_Time', e.target.value)} style={F} />
+                    </Field>
+                    <Field label={t('therapistMgmt.duration')}>
+                      <input type="number" value={String(form.Session_Duration_Min || 50)}
+                        onChange={(e) => set('Session_Duration_Min', Number(e.target.value))} style={F} />
+                    </Field>
                   </div>
                 </div>
               </Tabs.Panel>
 
               <Tabs.Panel id="fees">
-                <div className="grid grid-cols-2 gap-3 pt-3">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }} className="pt-3">
                   {['Individual', 'Couples', 'Family', 'Group', 'Workshop'].map((type) => (
-                    <Input key={type} type="number" min="0" label={`${type} (EGP)`}
-                      value={String(form[`Fee_${type}`] || '')}
-                      onValueChange={(v) => set(`Fee_${type}`, Number(v))} />
+                    <Field key={type} label={`${type} (EGP)`}>
+                      <input type="number" min="0"
+                        value={String(form[`Fee_${type}`] || '')}
+                        onChange={(e) => set(`Fee_${type}`, Number(e.target.value))}
+                        style={F} />
+                    </Field>
                   ))}
-                  <Input type="number" min="0" max="100" label={t('therapistMgmt.revenueShare')}
-                    value={String(form.Revenue_Share_Pct || '')}
-                    onValueChange={(v) => set('Revenue_Share_Pct', Number(v))} />
+                  <Field label={t('therapistMgmt.revenueShare')}>
+                    <input type="number" min="0" max="100"
+                      value={String(form.Revenue_Share_Pct || '')}
+                      onChange={(e) => set('Revenue_Share_Pct', Number(e.target.value))}
+                      style={F} />
+                  </Field>
                 </div>
               </Tabs.Panel>
 
               <Tabs.Panel id="block">
-                <div className="flex flex-col gap-3 pt-3">
-                  <Input type="date" label={t('sessions.date')} value={block.date} onValueChange={(v) => setB('date', v)} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input type="time" label={t('therapistMgmt.startTime')} value={block.timeStart} onValueChange={(v) => setB('timeStart', v)} />
-                    <Input type="time" label={t('therapistMgmt.endTime')}   value={block.timeEnd}   onValueChange={(v) => setB('timeEnd', v)} />
+                <div className="flex flex-col gap-1 pt-3">
+                  <Field label={t('sessions.date')}>
+                    <input type="date" value={block.date} onChange={(e) => setB('date', e.target.value)} style={F} />
+                  </Field>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <Field label={t('therapistMgmt.startTime')}>
+                      <input type="time" value={block.timeStart} onChange={(e) => setB('timeStart', e.target.value)} style={F} />
+                    </Field>
+                    <Field label={t('therapistMgmt.endTime')}>
+                      <input type="time" value={block.timeEnd} onChange={(e) => setB('timeEnd', e.target.value)} style={F} />
+                    </Field>
                   </div>
-                  <Input label={t('therapistMgmt.blockReason')} value={block.reason} onValueChange={(v) => setB('reason', v)} />
+                  <Field label={t('therapistMgmt.blockReason')}>
+                    <input value={block.reason} onChange={(e) => setB('reason', e.target.value)} style={F} />
+                  </Field>
                   <Button color="warning" variant="flat" isDisabled={blockSaving || !block.date}
                     startContent={blockSaving ? <Spinner size="sm" /> : undefined}
                     onPress={handleBlock}>

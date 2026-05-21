@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Chip, Separator, Modal, Spinner, TextArea } from '@heroui/react';
+import { Button, Chip, Separator, Modal, Spinner } from '@heroui/react';
 import { useI18n } from '../i18n';
 import DataTable from './DataTable';
 
@@ -68,7 +68,17 @@ export default function ClientDetailModal({ client, isOpen, onClose }) {
 
             <div>
               <p className="text-sm font-semibold text-default-700 mb-2">{t('clients.notes')}</p>
-              <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                style={{
+                  display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
+                  borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
+                  backgroundColor: '#ffffff', color: '#111827', fontSize: '16px',
+                  marginBottom: '8px', boxSizing: 'border-box', resize: 'vertical',
+                }}
+              />
               <div className="flex items-center gap-2 mt-2">
                 <Button size="sm" color="primary" isDisabled={saving}
                   startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
