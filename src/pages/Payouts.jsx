@@ -32,7 +32,7 @@ export default function Payouts() {
   const load = () => {
     setLoading(true);
     getPayouts(Number(month), Number(year)).then((r) => {
-      setPayouts(r.success ? (r.data ?? []) : []);
+      setPayouts(r.success && Array.isArray(r.data) ? r.data : []);
       setLoading(false);
     });
   };
@@ -40,8 +40,8 @@ export default function Payouts() {
   useEffect(load, [month, year]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalCenterRevenue = useMemo(() =>
-    payouts.reduce((acc, p) =>
-      acc + (p.sessions ?? []).reduce((s, session) => s + Number(session.Revenue_Center || 0), 0),
+    (Array.isArray(payouts) ? payouts : []).reduce((acc, p) =>
+      acc + (Array.isArray(p.sessions) ? p.sessions : []).reduce((s, session) => s + Number(session.Revenue_Center || 0), 0),
     0),
   [payouts]);
 

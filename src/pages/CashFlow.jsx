@@ -39,14 +39,15 @@ export default function CashFlow() {
   const load = () => {
     setLoading(true);
     getTransactions(Number(month), Number(year)).then((r) => {
-      setRows(r.success ? (r.data?.rows ?? r.data ?? []) : []);
+      const raw = r.data?.rows ?? r.data;
+      setRows(r.success && Array.isArray(raw) ? raw : []);
       setLoading(false);
     });
   };
 
   useEffect(load, [month, year]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totals = useMemo(() => rows.reduce((acc, r) => ({
+  const totals = useMemo(() => (Array.isArray(rows) ? rows : []).reduce((acc, r) => ({
     in:  acc.in  + Number(r.Cash_In  || 0),
     out: acc.out + Number(r.Cash_Out || 0),
   }), { in: 0, out: 0 }), [rows]);

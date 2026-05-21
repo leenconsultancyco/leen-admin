@@ -26,15 +26,16 @@ export default function Clients() {
 
   useEffect(() => {
     getClients().then((r) => {
-      setClients(r.success ? (r.data ?? []) : []);
+      setClients(r.success && Array.isArray(r.data) ? r.data : []);
       setLoading(false);
     });
   }, []);
 
   const filtered = useMemo(() => {
-    if (!query) return clients;
+    const safe = Array.isArray(clients) ? clients : [];
+    if (!query) return safe;
     const q = query.toLowerCase();
-    return clients.filter((c) =>
+    return safe.filter((c) =>
       c.Name?.toLowerCase().includes(q) || c.Phone?.includes(q)
     );
   }, [clients, query]);

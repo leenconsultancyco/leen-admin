@@ -40,8 +40,9 @@ export default function DataTable({ columns = [], data = [], loading = false, em
   }
 
   const sorted = useMemo(() => {
-    if (!sort.key) return data;
-    return [...data].sort((a, b) => {
+    const safe = Array.isArray(data) ? data : [];
+    if (!sort.key) return safe;
+    return [...safe].sort((a, b) => {
       const cmp = String(a[sort.key] ?? '').localeCompare(String(b[sort.key] ?? ''), undefined, { numeric: true });
       return sort.dir === 'asc' ? cmp : -cmp;
     });

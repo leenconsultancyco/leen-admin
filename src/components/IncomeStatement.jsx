@@ -23,7 +23,7 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
   const netIncome     = totalRevenue - totalExpenses;
 
   const byTherapist = {};
-  (sessions || []).forEach((s) => {
+  (Array.isArray(sessions) ? sessions : []).forEach((s) => {
     const name = s.Therapist_Name || '—';
     if (!byTherapist[name]) byTherapist[name] = { sessions: 0, revenue: 0 };
     byTherapist[name].sessions++;
@@ -31,7 +31,7 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
   });
 
   const byCategory = {};
-  (expenses || []).forEach((e) => {
+  (Array.isArray(expenses) ? expenses : []).forEach((e) => {
     const cat = e.Category || 'Other';
     byCategory[cat] = (byCategory[cat] || 0) + Number(e.Actual_EGP || 0);
   });

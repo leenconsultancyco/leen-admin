@@ -46,20 +46,20 @@ export default function Sessions() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   useEffect(() => {
-    getTherapistsFull().then((r) => { if (r.success) setTherapists(r.data ?? []); });
+    getTherapistsFull().then((r) => { setTherapists(r.success && Array.isArray(r.data) ? r.data : []); });
   }, []);
 
   const load = () => {
     setLoading(true);
     getSessions({ month: Number(month), year: Number(year), therapistId: therapistId || undefined, status: status || undefined })
-      .then((r) => { setSessions(r.success ? (r.data ?? []) : []); setLoading(false); });
+      .then((r) => { setSessions(r.success && Array.isArray(r.data) ? r.data : []); setLoading(false); });
   };
 
   useEffect(load, [month, year, therapistId, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtered = payment ? sessions.filter((s) => s.Payment_Status === payment) : sessions;
+  const filtered = (Array.isArray(sessions) ? sessions : []).filter((s) => !payment || s.Payment_Status === payment);
 
-  const totals = useMemo(() => filtered.reduce((acc, s) => ({
+  const totals = useMemo(() => (Array.isArray(filtered) ? filtered : []).reduce((acc, s) => ({
     sessions: acc.sessions + 1,
     revenue:  acc.revenue   + Number(s.Fee || 0),
     therapist:acc.therapist + Number(s.Revenue_Therapist || 0),

@@ -45,14 +45,14 @@ export default function Expenses() {
   const load = () => {
     setLoading(true);
     getExpenses(Number(month), Number(year)).then((r) => {
-      setRows(r.success ? (r.data ?? []) : []);
+      setRows(r.success && Array.isArray(r.data) ? r.data : []);
       setLoading(false);
     });
   };
 
   useEffect(load, [month, year]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totals = useMemo(() => rows.reduce((acc, r) => ({
+  const totals = useMemo(() => (Array.isArray(rows) ? rows : []).reduce((acc, r) => ({
     expected: acc.expected + Number(r.Expected_EGP || 0),
     actual:   acc.actual   + Number(r.Actual_EGP   || 0),
   }), { expected: 0, actual: 0 }), [rows]);
@@ -61,7 +61,7 @@ export default function Expenses() {
 
   const chartData = useMemo(() => {
     const map = {};
-    rows.forEach((r) => {
+    (Array.isArray(rows) ? rows : []).forEach((r) => {
       const cat = r.Category || 'Other';
       if (!map[cat]) map[cat] = { category: cat, expected: 0, actual: 0 };
       map[cat].expected += Number(r.Expected_EGP || 0);

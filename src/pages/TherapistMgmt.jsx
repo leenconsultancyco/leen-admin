@@ -26,14 +26,14 @@ export default function TherapistMgmt() {
   const load = () => {
     setLoading(true);
     getTherapistsFull().then((r) => {
-      setTherapists(r.success ? (r.data ?? []) : []);
+      setTherapists(r.success && Array.isArray(r.data) ? r.data : []);
       setLoading(false);
     });
   };
 
   useEffect(load, []);
 
-  const filtered = therapists.filter((th) => {
+  const filtered = (Array.isArray(therapists) ? therapists : []).filter((th) => {
     const q = search.toLowerCase();
     return !q || th.Name_EN?.toLowerCase().includes(q) || th.Name_AR?.includes(q);
   });

@@ -43,8 +43,8 @@ export default function Reports() {
       getExpenses(Number(month), Number(year)),
     ]).then(([d, s, e]) => {
       setDash(d.success ? d.data : null);
-      setSessions(s.success ? (s.data ?? []) : []);
-      setExpenses(e.success ? (e.data ?? []) : []);
+      setSessions(s.success && Array.isArray(s.data) ? s.data : []);
+      setExpenses(e.success && Array.isArray(e.data) ? e.data : []);
       setLoading(false);
     });
   }, [month, year]);
@@ -71,10 +71,11 @@ export default function Reports() {
       getPayouts(Number(month), Number(year)),
       getTransactions(Number(month), Number(year)),
     ]);
-    if (key === 'sessions')     exportSessionsExcel(s.data ?? [], month, year);
-    if (key === 'expenses')     exportExpensesExcel(exp.data ?? [], month, year);
-    if (key === 'payouts')      exportPayoutsExcel(p.data ?? [], month, year);
-    if (key === 'transactions') exportTransactionsExcel(tx.data?.rows ?? tx.data ?? [], month, year);
+    if (key === 'sessions')     exportSessionsExcel(Array.isArray(s.data) ? s.data : [], month, year);
+    if (key === 'expenses')     exportExpensesExcel(Array.isArray(exp.data) ? exp.data : [], month, year);
+    if (key === 'payouts')      exportPayoutsExcel(Array.isArray(p.data) ? p.data : [], month, year);
+    const txRows = tx.data?.rows ?? tx.data;
+    if (key === 'transactions') exportTransactionsExcel(Array.isArray(txRows) ? txRows : [], month, year);
     setExporting((e) => ({ ...e, [key]: false }));
   }
 
