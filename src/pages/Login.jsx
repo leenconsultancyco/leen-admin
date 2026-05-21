@@ -55,12 +55,25 @@ export default function Login() {
                   id="username"
                   type="text"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  autoComplete="username"
-                  disabled={loading}
+                  onChange={e => setUsername(e.target.value)}
                   placeholder="admin"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                  autoComplete="username"
+                  required
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    borderWidth: '2px',
+                    borderStyle: 'solid',
+                    borderColor: '#9ca3af',
+                    borderRadius: '8px',
+                    padding: '10px 16px',
+                    backgroundColor: '#ffffff',
+                    color: '#111827',
+                    fontSize: '16px',
+                    marginBottom: '16px',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
                 />
               </div>
 
@@ -71,11 +84,24 @@ export default function Login() {
                     id="password"
                     type={showPwd ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
+                    onChange={e => setPassword(e.target.value)}
                     autoComplete="current-password"
-                    disabled={loading}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 pe-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                    required
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                      borderColor: '#9ca3af',
+                      borderRadius: '8px',
+                      padding: '10px 16px',
+                      backgroundColor: '#ffffff',
+                      color: '#111827',
+                      fontSize: '16px',
+                      marginBottom: '16px',
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                    }}
                   />
                   <button
                     type="button"
