@@ -23,7 +23,7 @@ export default function EditExpenseModal({ expense, isOpen, onClose, onSuccess }
   useEffect(() => {
     if (expense) {
       setForm({
-        date:     expense.Date     || '',
+        date:     (expense.Date || '').substring(0, 10),
         category: expense.Category || 'Cleaning',
         item:     expense.Item     || '',
         amount:   String(expense.Actual_EGP || ''),
