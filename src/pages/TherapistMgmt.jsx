@@ -1,16 +1,33 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Chip, Input, Skeleton } from '@heroui/react';
+import { Card, Button, Chip, Skeleton } from '@heroui/react';
 import { getTherapistsFull } from '../api';
 import { useI18n } from '../i18n';
 import TherapistEditModal from '../components/TherapistEditModal';
 
+const BLANK_THERAPIST = {
+  Therapist_ID: '', Name_EN: '', Name_AR: '',
+  Title_EN: '', Title_AR: '', Bio_EN: '', Bio_AR: '',
+  Specialties: '', Languages: 'Arabic, English',
+  Session_Types: 'Individual', Modes: 'Both',
+  Working_Days: 'Sun,Mon,Tue,Wed,Thu',
+  Start_Time: '09:00', End_Time: '17:00', Session_Duration_Min: 50,
+  Fee_Individual: '', Fee_Couples: '', Fee_Family: '',
+  Fee_Group: '', Fee_Workshop: '', Revenue_Share_Pct: 70,
+  Photo_URL: '', Display_Order: '', Active: true,
+};
+
 function Avatar({ therapist }) {
   if (therapist.Photo_URL) {
-    return <img src={therapist.Photo_URL} alt={therapist.Name_EN} className="w-12 h-12 rounded-full object-cover shrink-0" />;
+    return <img src={therapist.Photo_URL} alt={therapist.Name_EN}
+      style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
   }
   const letters = (therapist.Name_EN || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
-    <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shrink-0">
+    <div style={{
+      width: 48, height: 48, borderRadius: '50%', backgroundColor: '#0E9B73',
+      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 14, fontWeight: 700, flexShrink: 0,
+    }}>
       {letters}
     </div>
   );
@@ -22,6 +39,7 @@ export default function TherapistMgmt() {
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
   const [editing, setEditing]       = useState(null);
+  const [adding, setAdding]         = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -40,14 +58,24 @@ export default function TherapistMgmt() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Input
-        size="sm"
-        placeholder={t('clients.search')}
-        value={search}
-        onValueChange={setSearch}
-        className="max-w-xs"
-        startContent={<span className="text-default-400">🔍</span>}
-      />
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder={t('clients.search')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            flex: 1, minWidth: '180px', maxWidth: '280px',
+            borderWidth: '2px', borderStyle: 'solid', borderColor: '#d1d5db',
+            borderRadius: '8px', padding: '7px 14px', fontSize: '14px',
+            backgroundColor: '#fff', color: '#111827', boxSizing: 'border-box',
+            outline: 'none',
+          }}
+        />
+        <Button size="sm" color="primary" onPress={() => setAdding(true)}>
+          + {t('therapistMgmt.addTherapist') || 'Add Therapist'}
+        </Button>
+      </div>
 
       {loading ? (
         <div className="flex flex-col gap-3">
@@ -58,7 +86,7 @@ export default function TherapistMgmt() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map((th) => (
-            <Card key={th.Therapist_ID} className={!th.Active ? 'opacity-60' : ''}>
+            <Card key={th.Therapist_ID} style={{ opacity: th.Active ? 1 : 0.6 }}>
               <Card.Content className="flex flex-row items-center gap-4 p-4">
                 <Avatar therapist={th} />
                 <div className="flex-1 min-w-0">
@@ -80,12 +108,25 @@ export default function TherapistMgmt() {
         </div>
       )}
 
+      {/* Edit existing therapist */}
       {editing && (
         <TherapistEditModal
           therapist={editing}
+          isNew={false}
           isOpen={!!editing}
           onClose={() => setEditing(null)}
           onSuccess={() => { setEditing(null); load(); }}
+        />
+      )}
+
+      {/* Add new therapist */}
+      {adding && (
+        <TherapistEditModal
+          therapist={BLANK_THERAPIST}
+          isNew={true}
+          isOpen={adding}
+          onClose={() => setAdding(false)}
+          onSuccess={() => { setAdding(false); load(); }}
         />
       )}
     </div>

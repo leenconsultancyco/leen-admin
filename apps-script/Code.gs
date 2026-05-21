@@ -143,6 +143,7 @@ function doPost(e) {
       case 'editExpense':     return ok(editExpense_(body));
       case 'deleteExpense':   return ok(deleteExpense_(body));
       case 'markPaid':        return ok(markPaid_(body.bookingId, body.paymentMethod));
+      case 'addTherapist':    return ok(addTherapist_(body));
       case 'updateTherapist': return ok(updateTherapist_(body));
       case 'blockDate':       return ok(blockDate_(body));
       case 'markPayoutPaid':  return ok(markPayoutPaid_(body));
@@ -531,6 +532,31 @@ function deleteExpense_(body) {
     }
   }
   throw new Error('Expense not found');
+}
+
+// ---------------------------------------------------------------------------
+// POST — Add Therapist
+// ---------------------------------------------------------------------------
+
+function addTherapist_(body) {
+  const sheet   = getSheet('Therapists');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Generate next T-NNN id
+  const existing = sheet.getLastRow() < 2 ? [] :
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat()
+      .filter(v => String(v).startsWith('T-'))
+      .map(v => parseInt(String(v).slice(2)) || 0);
+  const id = 'T-' + String((existing.length ? Math.max(...existing) : 0) + 1).padStart(3, '0');
+
+  const row = headers.map(h => {
+    if (h === 'Therapist_ID') return id;
+    if (h === 'Joined_Date')  return today_();
+    if (h === 'Active')       return body.Active !== false;
+    return body[h] !== undefined ? body[h] : '';
+  });
+  sheet.appendRow(row);
+  return { therapistId: id };
 }
 
 // ---------------------------------------------------------------------------
