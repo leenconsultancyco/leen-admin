@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Input, Label, Spinner } from '@heroui/react';
+import { Button, Card, Spinner } from '@heroui/react';
 import { login, isAuthenticated } from '../auth';
 import { useI18n } from '../i18n';
 import LanguageToggle from '../components/LanguageToggle';
@@ -49,9 +49,9 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="username">{t('login.username')}</Label>
-                <Input
+              <div className="flex flex-col gap-1 w-full">
+                <label htmlFor="username" className="text-sm font-medium text-gray-700">{t('login.username')}</label>
+                <input
                   id="username"
                   type="text"
                   value={username}
@@ -59,13 +59,15 @@ export default function Login() {
                   required
                   autoComplete="username"
                   disabled={loading}
+                  placeholder="admin"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 />
               </div>
 
-              <div className="flex flex-col gap-1">
-                <Label htmlFor="password">{t('login.password')}</Label>
+              <div className="flex flex-col gap-1 w-full">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700">{t('login.password')}</label>
                 <div className="relative">
-                  <Input
+                  <input
                     id="password"
                     type={showPwd ? 'text' : 'password'}
                     value={password}
@@ -73,12 +75,12 @@ export default function Login() {
                     required
                     autoComplete="current-password"
                     disabled={loading}
-                    className="pe-10"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 pe-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPwd((v) => !v)}
-                    className="absolute inset-y-0 end-2 flex items-center text-default-400 text-lg focus:outline-none"
+                    className="absolute inset-y-0 end-2 flex items-center text-gray-400 text-lg focus:outline-none"
                     tabIndex={-1}
                     aria-label={showPwd ? 'Hide password' : 'Show password'}
                   >
