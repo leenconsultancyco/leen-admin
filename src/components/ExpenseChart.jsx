@@ -1,38 +1,38 @@
 import { Skeleton } from '@heroui/react';
 import {
   BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { useI18n } from '../i18n';
 
-const COLOR_EXPECTED = 'oklch(0.82 0.10 162)';  // teal light
-const COLOR_ACTUAL   = 'var(--color-primary, #0E9B73)'; // teal dark (theme-aware)
-const COLOR_OVER     = '#f31260';
+const COLOR_BAR  = 'var(--color-primary, #0E9B73)';
 
 function fmt(v) { return `${Number(v).toLocaleString('en-EG')} EGP`; }
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-default-200 rounded-lg shadow-lg px-3 py-2 text-sm">
-      <p className="font-semibold text-default-700 mb-1">{label}</p>
-      {payload.map((entry) => (
-        <p key={entry.dataKey} style={{ color: entry.color }}>
-          {entry.name}: {fmt(entry.value)}
-        </p>
-      ))}
+    <div style={{
+      background: '#fff', border: '1px solid #e4e4e7',
+      borderRadius: '8px', padding: '8px 12px', fontSize: '13px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    }}>
+      <p style={{ fontWeight: 600, color: '#3f3f46', marginBottom: '2px' }}>{label}</p>
+      <p style={{ color: COLOR_BAR }}>{fmt(payload[0]?.value)}</p>
     </div>
   );
 }
 
 export default function ExpenseChart({ data = [], loading = false }) {
-  const { t } = useI18n();
-
   if (loading) return <Skeleton className="h-64 w-full rounded-xl" />;
+  if (!data.length) return (
+    <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a1a1aa', fontSize: 13 }}>
+      No data
+    </div>
+  );
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 4 }} barCategoryGap="30%">
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 4 }} barCategoryGap="35%">
         <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
         <XAxis
           dataKey="category"
@@ -41,31 +41,15 @@ export default function ExpenseChart({ data = [], loading = false }) {
           tickLine={false}
         />
         <YAxis
-          tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
           tick={{ fontSize: 11, fill: '#71717a' }}
           axisLine={false}
           tickLine={false}
           width={36}
         />
-        <Tooltip content={<CustomTooltip />} />
-        <Legend
-          formatter={(value) =>
-            value === 'expected' ? t('expenses.expected') : t('expenses.actual')
-          }
-          wrapperStyle={{ fontSize: 13 }}
-        />
-
-        {/* Expected — always teal light */}
-        <Bar dataKey="expected" name="expected" fill={COLOR_EXPECTED} radius={[4, 4, 0, 0]} />
-
-        {/* Actual — teal dark unless over-budget (red) */}
-        <Bar dataKey="actual" name="actual" radius={[4, 4, 0, 0]}>
-          {data.map((entry, i) => (
-            <Cell
-              key={i}
-              fill={entry.actual > entry.expected ? COLOR_OVER : COLOR_ACTUAL}
-            />
-          ))}
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+        <Bar dataKey="actual" radius={[4, 4, 0, 0]} maxBarSize={60}>
+          {data.map((_, i) => <Cell key={i} fill={COLOR_BAR} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>

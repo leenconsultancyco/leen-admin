@@ -174,6 +174,14 @@ export async function addExpense(expenseData) {
   return post('addExpense', expenseData);
 }
 
+export async function editExpense(expenseData) {
+  return post('editExpense', expenseData);
+}
+
+export async function deleteExpense(expenseId) {
+  return post('deleteExpense', { expenseId });
+}
+
 // ---------------------------------------------------------------------------
 // POST — Therapist management
 // ---------------------------------------------------------------------------

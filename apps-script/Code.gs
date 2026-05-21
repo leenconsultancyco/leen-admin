@@ -22,7 +22,13 @@ function sheetToObjects(sheet) {
   const headers = data[0];
   return data.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
+    headers.forEach((h, i) => {
+      let val = row[i];
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, TZ, 'yyyy-MM-dd');
+      }
+      obj[h] = val;
+    });
     return obj;
   });
 }
@@ -134,6 +140,8 @@ function doPost(e) {
       case 'cancelBooking':   return ok(cancelBooking_(body.bookingId, body.reason));
       case 'addTransaction':  return ok(addTransaction_(body));
       case 'addExpense':      return ok(addExpense_(body));
+      case 'editExpense':     return ok(editExpense_(body));
+      case 'deleteExpense':   return ok(deleteExpense_(body));
       case 'markPaid':        return ok(markPaid_(body.bookingId, body.paymentMethod));
       case 'updateTherapist': return ok(updateTherapist_(body));
       case 'blockDate':       return ok(blockDate_(body));
@@ -472,6 +480,57 @@ function addExpense_(body) {
     body.paidBy || 'Cash', body.idempotencyKey, body.notes || ''
   ]);
   return { expenseId: id };
+}
+
+// ---------------------------------------------------------------------------
+// POST — Edit Expense
+// ---------------------------------------------------------------------------
+
+function editExpense_(body) {
+  const sheet   = getSheet('Expenses');
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol   = headers.indexOf('Expense_ID');
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idCol] === body.expenseId) {
+      const date     = body.date || toDateStr(data[i][headers.indexOf('Date')]);
+      const d        = new Date(date);
+      const month    = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const actual   = Number(body.actualEGP   || 0);
+      const expected = Number(body.expectedEGP || actual);
+      const updates  = {
+        Date: date, Month: month,
+        Category: body.category, Item: body.item,
+        Expected_EGP: expected, Actual_EGP: actual,
+        Variance: actual - expected,
+        Paid_By: body.paidBy, Notes: body.notes || '',
+      };
+      Object.entries(updates).forEach(([col, val]) => {
+        const j = headers.indexOf(col);
+        if (j >= 0) sheet.getRange(i + 1, j + 1).setValue(val);
+      });
+      return { expenseId: body.expenseId };
+    }
+  }
+  throw new Error('Expense not found');
+}
+
+// ---------------------------------------------------------------------------
+// POST — Delete Expense
+// ---------------------------------------------------------------------------
+
+function deleteExpense_(body) {
+  const sheet   = getSheet('Expenses');
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol   = headers.indexOf('Expense_ID');
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idCol] === body.expenseId) {
+      sheet.deleteRow(i + 1);
+      return { deleted: true };
+    }
+  }
+  throw new Error('Expense not found');
 }
 
 // ---------------------------------------------------------------------------
