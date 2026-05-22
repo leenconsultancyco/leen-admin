@@ -122,6 +122,10 @@ export async function getClients() {
   }
 }
 
+export async function addClient(clientData) {
+  return post('addClient', clientData);
+}
+
 // ---------------------------------------------------------------------------
 // GET — Therapists (full admin view, includes inactive)
 // ---------------------------------------------------------------------------

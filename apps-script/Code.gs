@@ -143,6 +143,7 @@ function doPost(e) {
       case 'editExpense':     return ok(editExpense_(body));
       case 'deleteExpense':   return ok(deleteExpense_(body));
       case 'markPaid':        return ok(markPaid_(body.bookingId, body.paymentMethod));
+      case 'addClient':       return ok(addClient_(body));
       case 'addTherapist':    return ok(addTherapist_(body));
       case 'updateTherapist': return ok(updateTherapist_(body));
       case 'blockDate':       return ok(blockDate_(body));
@@ -532,6 +533,36 @@ function deleteExpense_(body) {
     }
   }
   throw new Error('Expense not found');
+}
+
+// ---------------------------------------------------------------------------
+// POST — Add Client (manual entry — no booking required)
+// ---------------------------------------------------------------------------
+
+function addClient_(body) {
+  const sheet   = getSheet('Clients');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Generate next C-NNN id
+  const existing = sheet.getLastRow() < 2 ? [] :
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat()
+      .filter(v => String(v).startsWith('C-'))
+      .map(v => parseInt(String(v).slice(2)) || 0);
+  const id = 'C-' + String((existing.length ? Math.max(...existing) : 0) + 1).padStart(3, '0');
+
+  const row = headers.map(h => {
+    if (h === 'Client_ID')     return id;
+    if (h === 'Name')          return body.name || '';
+    if (h === 'Phone')         return body.phone || '';
+    if (h === 'Email')         return body.email || '';
+    if (h === 'Status')        return body.status || 'Active';
+    if (h === 'Notes')         return body.notes || '';
+    if (h === 'Total_Sessions')return 0;
+    if (h === 'Added_At')      return now_();
+    return '';
+  });
+  sheet.appendRow(row);
+  return { clientId: id };
 }
 
 // ---------------------------------------------------------------------------

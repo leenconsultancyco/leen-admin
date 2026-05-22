@@ -136,6 +136,7 @@ export const translations = {
 
     clients: {
       title:              'Clients',
+      addClient:          'Add Client',
       search:             'Search by name or phone',
       name:               'Name',
       phone:              'Phone',
@@ -358,6 +359,7 @@ export const translations = {
 
     clients: {
       title:              'العملاء',
+      addClient:          'إضافة عميل',
       search:             'بحث بالاسم أو الهاتف',
       name:               'الاسم',
       phone:              'الهاتف',
