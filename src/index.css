@@ -7,6 +7,12 @@
   --color-primary-foreground: #ffffff;
 }
 
+/* Candara font for all headings */
+h1, h2, h3, h4, h5, h6,
+.font-semibold, .font-bold {
+  font-family: Candara, 'Candara Light', Calibri, Georgia, sans-serif;
+}
+
 /* 6 theme overrides applied via data-theme on <html> */
 [data-theme="navy"]   { --color-primary: oklch(0.35 0.15 264); }
 [data-theme="blue"]   { --color-primary: oklch(0.55 0.20 240); }

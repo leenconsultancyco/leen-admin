@@ -112,6 +112,7 @@ export const translations = {
 
     therapistMgmt: {
       title:        'Therapist Management',
+      addTherapist: 'Add Therapist',
       editTherapist:'Edit Therapist',
       name:         'Name',
       title2:       'Title',
@@ -333,6 +334,7 @@ export const translations = {
 
     therapistMgmt: {
       title:        'إدارة المعالجين',
+      addTherapist: 'إضافة معالج',
       editTherapist:'تعديل المعالج',
       name:         'الاسم',
       title2:       'المسمى الوظيفي',

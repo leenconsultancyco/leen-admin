@@ -181,7 +181,7 @@ export default function TherapistEditModal({ therapist, isNew = false, isOpen, o
                       ))}
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <Field label={t('therapistMgmt.startTime')}>
                       <input type="time" value={form.Start_Time || ''}
                         onChange={(e) => set('Start_Time', e.target.value)} style={F} />
@@ -190,11 +190,11 @@ export default function TherapistEditModal({ therapist, isNew = false, isOpen, o
                       <input type="time" value={form.End_Time || ''}
                         onChange={(e) => set('End_Time', e.target.value)} style={F} />
                     </Field>
-                    <Field label={t('therapistMgmt.duration')}>
-                      <input type="number" value={String(form.Session_Duration_Min || 50)}
-                        onChange={(e) => set('Session_Duration_Min', Number(e.target.value))} style={F} />
-                    </Field>
                   </div>
+                  <Field label={t('therapistMgmt.duration')}>
+                    <input type="number" value={String(form.Session_Duration_Min || 50)}
+                      onChange={(e) => set('Session_Duration_Min', Number(e.target.value))} style={F} />
+                  </Field>
                 </div>
               </Tabs.Panel>
 
