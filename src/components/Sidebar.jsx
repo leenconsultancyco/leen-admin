@@ -17,35 +17,38 @@ const NAV_ITEMS = [
   { key: 'settings',   path: '/settings',   icon: '⚙️' },
 ];
 
+const SIDEBAR_BG   = '#1a2d4a';
+const SIDEBAR_BORDER = 'rgba(255,255,255,0.08)';
+
 export default function Sidebar() {
   const { t } = useI18n();
   const location = useLocation();
   const username = getAdminUsername();
 
   return (
-    <aside className="hidden md:flex flex-col fixed inset-y-0 start-0 w-[220px] bg-white border-e border-default-200 z-20">
+    <aside
+      className="hidden md:flex flex-col fixed inset-y-0 start-0 w-[220px] z-20"
+      style={{ backgroundColor: SIDEBAR_BG }}
+    >
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-default-200">
-        <p className="text-xl font-bold text-primary">ليـن</p>
-        <p className="text-xs text-default-400 mt-0.5">Leen Psychotherapy Center</p>
+      <div style={{ padding: '20px', borderBottom: `1px solid ${SIDEBAR_BORDER}` }}>
+        <p style={{ fontSize: '22px', fontWeight: 700, color: '#ffffff', margin: 0 }}>ليـن</p>
+        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', margin: '2px 0 0' }}>
+          Leen Psychotherapy Center
+        </p>
       </div>
 
       {/* Nav items */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2">
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 8px' }}>
         {NAV_ITEMS.map(({ key, path, icon }) => {
           const active = location.pathname === path;
           return (
             <Link
               key={key}
               to={path}
-              className={[
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm transition-colors',
-                active
-                  ? 'bg-primary text-primary-foreground font-semibold'
-                  : 'text-default-600 hover:bg-default-100',
-              ].join(' ')}
+              className={`leen-nav-item${active ? ' leen-nav-active' : ''}`}
             >
-              <span className="text-base leading-none">{icon}</span>
+              <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
               <span>{t(`nav.${key}`)}</span>
             </Link>
           );
@@ -53,19 +56,14 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="px-3 py-4 border-t border-default-200 flex flex-col gap-3">
+      <div style={{ padding: '12px', borderTop: `1px solid ${SIDEBAR_BORDER}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <ConnectionBadge />
-
         <LanguageToggle />
-
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-default-400 truncate">{username}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            color="danger"
-            onPress={logout}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {username}
+          </span>
+          <Button size="sm" variant="ghost" color="danger" onPress={logout}>
             {t('nav.logout')}
           </Button>
         </div>

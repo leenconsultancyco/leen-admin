@@ -41,13 +41,8 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
 
       {/* Main content */}
       <main
-        className={[
-          // Desktop: offset by sidebar width
-          'md:ms-[220px]',
-          // Mobile: offset by top bar + bottom nav
-          'pt-14 pb-20 md:pt-0 md:pb-0',
-          'p-4 md:p-6',
-        ].join(' ')}
+        className="md:ms-[220px] pt-14 pb-20 md:pt-0 md:pb-0"
+        style={{ padding: '28px 32px' }}
       >
         {children}
       </main>

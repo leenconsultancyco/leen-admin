@@ -16,7 +16,7 @@ const TREND_COLOR = {
 export default function StatCard({ icon, value, label, color = 'default', trend, onClick }) {
   return (
     <Card
-      className={['transition-shadow', onClick ? 'cursor-pointer hover:shadow-md' : ''].join(' ')}
+      className={['leen-card', onClick ? 'cursor-pointer' : ''].join(' ')}
       isPressable={!!onClick}
       onPress={onClick}
     >

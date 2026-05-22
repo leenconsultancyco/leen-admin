@@ -12,6 +12,43 @@ html, body, * {
   font-family: Candara, 'Candara Light', Calibri, Georgia, sans-serif;
 }
 
+/* ── Card hover — blue pop-up effect ──────────────────────────────────── */
+.leen-card {
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.leen-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.20);
+  border-color: rgba(37, 99, 235, 0.40) !important;
+}
+
+/* ── Sidebar nav item — hover + active states ─────────────────────────── */
+.leen-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin-bottom: 2px;
+  text-decoration: none;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.70);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.leen-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+.leen-nav-active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+.leen-nav-active:hover {
+  background-color: #1d4ed8 !important;
+}
+
 /* 6 theme overrides applied via data-theme on <html> */
 [data-theme="navy"]   { --color-primary: oklch(0.35 0.15 264); }
 [data-theme="blue"]   { --color-primary: oklch(0.55 0.20 240); }
