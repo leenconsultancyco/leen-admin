@@ -12,7 +12,7 @@ function MobileCardList({ columns, rows, onRowClick }) {
           key={i}
           isPressable={!!onRowClick}
           onPress={() => onRowClick?.(row)}
-          className="w-full"
+          className="leen-card w-full"
         >
           <Card.Content className="p-3 gap-1">
             {preview.map((col) => (

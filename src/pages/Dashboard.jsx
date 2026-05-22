@@ -75,14 +75,14 @@ export default function Dashboard() {
         </section>
       )}
 
-      <Card>
+      <Card className="leen-card">
         <Card.Content className="p-4 gap-3">
           <h2 className="text-base font-semibold text-default-700">{t('dashboard.monthlyRevenue')}</h2>
           <RevenueChart data={Array.isArray(d.monthlyChart) ? d.monthlyChart : []} loading={loading} />
         </Card.Content>
       </Card>
 
-      <Card>
+      <Card className="leen-card">
         <Card.Content className="p-4 gap-3">
           <h2 className="text-base font-semibold text-default-700">{t('dashboard.recentActivity')}</h2>
           {loading ? (

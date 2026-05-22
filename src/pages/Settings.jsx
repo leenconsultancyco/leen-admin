@@ -25,7 +25,7 @@ function daysSince(dateStr) {
 
 function Section({ title, children }) {
   return (
-    <Card>
+    <Card className="leen-card">
       <Card.Content className="flex flex-col gap-4 p-5">
         <p className="text-base font-semibold text-default-800">{title}</p>
         <Separator />

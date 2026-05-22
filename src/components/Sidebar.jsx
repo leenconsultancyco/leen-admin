@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { key: 'settings',   path: '/settings',   icon: '⚙️' },
 ];
 
-const SIDEBAR_BG   = '#1a2d4a';
+const SIDEBAR_BG     = 'var(--sidebar-bg)';
 const SIDEBAR_BORDER = 'rgba(255,255,255,0.08)';
 
 export default function Sidebar() {

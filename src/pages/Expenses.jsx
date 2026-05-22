@@ -122,7 +122,7 @@ export default function Expenses() {
         </div>
       </div>
 
-      <Card>
+      <Card className="leen-card">
         <Card.Content className="p-4 gap-2">
           <p className="text-sm font-semibold text-default-700">{t('expenses.chart')}</p>
           <ExpenseChart data={chartData} loading={loading} />

@@ -32,7 +32,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
 
   return (
     <>
-      <Card className={pending > 0 ? 'border border-warning-200' : ''}>
+      <Card className={`leen-card ${pending > 0 ? 'border border-warning-200' : ''}`}>
         <Card.Content className="gap-3 p-4">
           <div className="flex items-center gap-3">
             <Initials name={payout.therapistName} />

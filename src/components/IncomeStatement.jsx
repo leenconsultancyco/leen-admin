@@ -37,7 +37,7 @@ export default function IncomeStatement({ dashData, sessions, expenses, loading 
   });
 
   return (
-    <Card>
+    <Card className="leen-card">
       <Card.Content className="p-5 gap-1">
         <p className="text-base font-semibold text-default-800 mb-2">{t('reports.incomeStatement')}</p>
 

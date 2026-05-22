@@ -86,7 +86,7 @@ export default function TherapistMgmt() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filtered.map((th) => (
-            <Card key={th.Therapist_ID} style={{ opacity: th.Active ? 1 : 0.6 }}>
+            <Card key={th.Therapist_ID} className="leen-card" style={{ opacity: th.Active ? 1 : 0.6 }}>
               <Card.Content className="flex flex-row items-center gap-4 p-4">
                 <Avatar therapist={th} />
                 <div className="flex-1 min-w-0">

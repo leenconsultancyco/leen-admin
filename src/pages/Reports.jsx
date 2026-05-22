@@ -97,7 +97,7 @@ export default function Reports() {
 
       <IncomeStatement dashData={dash} sessions={sessions} expenses={expenses} loading={loading} />
 
-      <Card>
+      <Card className="leen-card">
         <Card.Content className="p-4 gap-2">
           <p className="text-sm font-semibold text-default-700">{t('reports.ytdChart')} {year}</p>
           <RevenueChart data={ytd} loading={loading} />

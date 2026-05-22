@@ -25,7 +25,7 @@ export default function PendingBookingCard({ booking, onDone }) {
 
   return (
     <>
-      <Card className="border border-warning-200 bg-warning-50">
+      <Card className="leen-card border border-warning-200 bg-warning-50">
         <Card.Content className="gap-3 p-4">
           <div className="flex items-start justify-between gap-2">
             <div>
