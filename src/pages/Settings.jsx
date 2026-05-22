@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, Input, Button, Separator, Spinner } from '@heroui/react';
-import { updatePassword } from '../api';
+import { Card, Button, Separator, Spinner } from '@heroui/react';
+import { updatePassword, updateSettings } from '../api';
 import { hashPassword, getAdminUsername } from '../auth';
 import { useI18n } from '../i18n';
 import LanguageToggle from '../components/LanguageToggle';
@@ -9,6 +9,14 @@ import BackupButton from '../components/BackupButton';
 
 const BACKUP_KEY = 'leen_last_backup';
 const URL_KEY    = 'leen_script_url';
+
+const F = {
+  display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
+  borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
+  backgroundColor: '#ffffff', color: '#111827', fontSize: '15px',
+  marginBottom: '4px', boxSizing: 'border-box', outline: 'none',
+};
+const LBL = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' };
 
 function daysSince(dateStr) {
   if (!dateStr) return Infinity;
@@ -27,22 +35,51 @@ function Section({ title, children }) {
   );
 }
 
+function Msg({ msg }) {
+  if (!msg) return null;
+  return (
+    <p style={{ fontSize: '13px', color: msg.ok ? '#16a34a' : '#dc2626', margin: '4px 0' }}>
+      {msg.ok ? '✓ ' : '✗ '}{msg.text}
+    </p>
+  );
+}
+
 export default function Settings() {
   const { t, lang } = useI18n();
 
+  // ── Backend URL ──────────────────────────────────────────────
   const [scriptUrl, setScriptUrl] = useState(localStorage.getItem(URL_KEY) || '');
-  const [editing, setEditing]     = useState(!localStorage.getItem(URL_KEY));
+  const [editingUrl, setEditingUrl] = useState(!localStorage.getItem(URL_KEY));
 
   function saveUrl() {
     if (!scriptUrl.trim()) return;
     localStorage.setItem(URL_KEY, scriptUrl.trim());
-    setEditing(false);
+    setEditingUrl(false);
     window.location.reload();
   }
 
-  const [pw, setPw]         = useState({ current: '', next: '', confirm: '' });
+  // ── Username ──────────────────────────────────────────────────
+  const [newUsername, setNewUsername] = useState('');
+  const [unSaving, setUnSaving]       = useState(false);
+  const [unMsg, setUnMsg]             = useState(null);
+
+  async function handleUsernameSave() {
+    if (!newUsername.trim()) return;
+    setUnSaving(true);
+    const result = await updateSettings({ ADMIN_USERNAME: newUsername.trim() });
+    setUnSaving(false);
+    if (result.success) {
+      setUnMsg({ text: t('settings.usernameChanged'), ok: true });
+      setNewUsername('');
+    } else {
+      setUnMsg({ text: result.error || t('general.error'), ok: false });
+    }
+  }
+
+  // ── Password ──────────────────────────────────────────────────
+  const [pw, setPw]           = useState({ next: '', confirm: '' });
   const [pwSaving, setPwSaving] = useState(false);
-  const [pwMsg, setPwMsg]   = useState(null);
+  const [pwMsg, setPwMsg]     = useState(null);
 
   async function handlePasswordSave() {
     if (pw.next !== pw.confirm) { setPwMsg({ text: t('settings.passwordMismatch'), ok: false }); return; }
@@ -53,19 +90,15 @@ export default function Settings() {
     setPwSaving(false);
     if (result.success) {
       setPwMsg({ text: t('settings.passwordChanged'), ok: true });
-      setPw({ current: '', next: '', confirm: '' });
+      setPw({ next: '', confirm: '' });
     } else {
       setPwMsg({ text: result.error || t('general.error'), ok: false });
     }
   }
 
+  // ── Backup ────────────────────────────────────────────────────
   const [lastBackup, setLastBackup] = useState(localStorage.getItem(BACKUP_KEY) || '');
-
-  function handleBackupDone(date) {
-    localStorage.setItem(BACKUP_KEY, date);
-    setLastBackup(date);
-  }
-
+  function handleBackupDone(date) { localStorage.setItem(BACKUP_KEY, date); setLastBackup(date); }
   const stale = daysSince(lastBackup) > 7;
   const neverBacked = !lastBackup;
 
@@ -79,60 +112,85 @@ export default function Settings() {
         <LanguageToggle />
       </div>
 
-      <Section title={lang === 'ar' ? 'رابط النظام' : 'Backend URL'}>
-        {editing ? (
+      {/* ── Backend URL ── */}
+      <Section title={t('settings.backendUrl')}>
+        {editingUrl ? (
           <div className="flex flex-col gap-2">
-            <Input type="password" label="Apps Script URL" value={scriptUrl}
-              onValueChange={setScriptUrl} placeholder="https://script.google.com/macros/s/..." />
+            <label style={LBL}>Apps Script URL</label>
+            <input type="url" value={scriptUrl} onChange={(e) => setScriptUrl(e.target.value)}
+              placeholder="https://script.google.com/macros/s/..." style={F} />
             <Button color="primary" size="sm" onPress={saveUrl} isDisabled={!scriptUrl.trim()}>
-              {lang === 'ar' ? 'حفظ' : 'Save & Reconnect'}
+              {lang === 'ar' ? 'حفظ والاتصال' : 'Save & Reconnect'}
             </Button>
           </div>
         ) : (
           <div className="flex items-center justify-between">
-            <span className="text-sm text-success">✓ {lang === 'ar' ? 'تم الاتصال' : 'Backend connected'}</span>
-            <Button size="sm" variant="light" onPress={() => setEditing(true)}>{t('general.edit')}</Button>
+            <span style={{ fontSize: '13px', color: '#16a34a' }}>✓ {lang === 'ar' ? 'تم الاتصال' : 'Backend connected'}</span>
+            <Button size="sm" variant="light" onPress={() => setEditingUrl(true)}>{t('general.edit')}</Button>
           </div>
         )}
       </Section>
 
-      <Section title={t('settings.changePassword')}>
-        <Input type="password" label={t('settings.currentPassword')} value={pw.current}
-          onValueChange={(v) => setPw((p) => ({ ...p, current: v }))} />
-        <Input type="password" label={t('settings.newPassword')} value={pw.next}
-          onValueChange={(v) => setPw((p) => ({ ...p, next: v }))} />
-        <Input type="password" label={t('settings.confirmPassword')} value={pw.confirm}
-          onValueChange={(v) => setPw((p) => ({ ...p, confirm: v }))}
-          isInvalid={!!pw.confirm && pw.next !== pw.confirm}
-          errorMessage={pw.confirm && pw.next !== pw.confirm ? t('settings.passwordMismatch') : ''} />
-        {pwMsg && <p className={`text-sm ${pwMsg.ok ? 'text-success' : 'text-danger'}`}>{pwMsg.text}</p>}
-        <Button color="primary" size="sm" isDisabled={pwSaving || !pw.next || pw.next !== pw.confirm}
-          startContent={pwSaving ? <Spinner size="sm" color="white" /> : undefined}
-          onPress={handlePasswordSave}>{t('general.save')}</Button>
+      {/* ── Change Username ── */}
+      <Section title={t('settings.changeUsername')}>
+        <p style={{ fontSize: '13px', color: '#6b7280' }}>
+          {lang === 'ar' ? 'المستخدم الحالي: ' : 'Current username: '}
+          <strong>{getAdminUsername() || '—'}</strong>
+        </p>
+        <div>
+          <label style={LBL}>{t('settings.newUsername')}</label>
+          <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)}
+            placeholder="new_username" style={F} />
+        </div>
+        <Msg msg={unMsg} />
+        <Button color="primary" size="sm"
+          isDisabled={unSaving || !newUsername.trim()}
+          startContent={unSaving ? <Spinner size="sm" color="white" /> : undefined}
+          onPress={handleUsernameSave}>
+          {t('general.save')}
+        </Button>
       </Section>
 
+      {/* ── Change Password ── */}
+      <Section title={t('settings.changePassword')}>
+        <div>
+          <label style={LBL}>{t('settings.newPassword')}</label>
+          <input type="password" value={pw.next}
+            onChange={(e) => setPw(p => ({ ...p, next: e.target.value }))} style={F} />
+        </div>
+        <div>
+          <label style={LBL}>{t('settings.confirmPassword')}</label>
+          <input type="password" value={pw.confirm}
+            onChange={(e) => setPw(p => ({ ...p, confirm: e.target.value }))} style={F} />
+          {pw.confirm && pw.next !== pw.confirm && (
+            <p style={{ fontSize: '12px', color: '#dc2626', marginTop: '2px' }}>{t('settings.passwordMismatch')}</p>
+          )}
+        </div>
+        <Msg msg={pwMsg} />
+        <Button color="primary" size="sm"
+          isDisabled={pwSaving || !pw.next || pw.next !== pw.confirm}
+          startContent={pwSaving ? <Spinner size="sm" color="white" /> : undefined}
+          onPress={handlePasswordSave}>
+          {t('general.save')}
+        </Button>
+      </Section>
+
+      {/* ── Backup ── */}
       <Section title={t('settings.backup')}>
-        <div className="text-sm text-default-600">
+        <div style={{ fontSize: '13px', color: '#4b5563' }}>
           <span>{t('settings.lastBackup')}: </span>
-          <span className={stale || neverBacked ? 'text-danger font-medium' : 'text-success font-medium'}>
+          <span style={{ fontWeight: 600, color: stale || neverBacked ? '#dc2626' : '#16a34a' }}>
             {neverBacked ? t('settings.neverBacked') : lastBackup}
           </span>
         </div>
         {(stale || neverBacked) && (
-          <div className="bg-warning-50 border border-warning-200 rounded-lg px-3 py-2 text-sm text-warning-700">
+          <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', color: '#713f12' }}>
             ⚠️ {t('dashboard.backupWarning')}
           </div>
         )}
         <BackupButton onBackupDone={handleBackupDone} />
-        <p className="text-xs text-default-400">
+        <p style={{ fontSize: '12px', color: '#a1a1aa' }}>
           {lang === 'ar' ? 'تشمل النسخة: المعاملات، المصروفات، الحجوزات، المستحقات.' : 'Includes: transactions, expenses, bookings, and payouts.'}
-        </p>
-      </Section>
-
-      <Section title={t('settings.centerInfo')}>
-        <p className="text-sm text-default-600"><span className="text-default-400">Admin: </span>{getAdminUsername()}</p>
-        <p className="text-xs text-default-400">
-          {lang === 'ar' ? 'لتعديل معلومات المركز، عدّل قاعدة البيانات في Google Sheets مباشرةً.' : 'To change center info, edit the Settings tab in Google Sheets directly.'}
         </p>
       </Section>
     </div>
