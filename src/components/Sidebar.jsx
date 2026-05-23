@@ -58,14 +58,16 @@ export default function Sidebar() {
       {/* Bottom section */}
       <div style={{ padding: '12px', borderTop: `1px solid ${SIDEBAR_BORDER}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <ConnectionBadge />
-        <LanguageToggle />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <LanguageToggle className="text-white" />
+        <div className="group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {username}
           </span>
-          <Button size="sm" variant="ghost" color="danger" onPress={logout}>
-            {t('nav.logout')}
-          </Button>
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <Button size="sm" variant="ghost" color="danger" onPress={logout}>
+              {t('nav.logout')}
+            </Button>
+          </span>
         </div>
       </div>
     </aside>
