@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button, Drawer } from '@heroui/react';
+import { Button } from '@heroui/react';
 import { useI18n } from '../i18n';
 import { logout } from '../auth';
 
@@ -34,57 +35,60 @@ function TabLink({ icon, label, active, path }) {
 export default function BottomNav() {
   const { t } = useI18n();
   const location = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
   const moreActive = MORE_ITEMS.some((item) => location.pathname === item.path);
 
   return (
-    <nav
-      className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-default-200 flex z-20"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-    >
-      {PRIMARY_TABS.map(({ key, path, icon }) => (
-        <TabLink key={key} path={path} icon={icon} label={t(`nav.${key}`)} active={location.pathname === path} />
-      ))}
+    <>
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-default-200 flex z-20"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        {PRIMARY_TABS.map(({ key, path, icon }) => (
+          <TabLink key={key} path={path} icon={icon} label={t(`nav.${key}`)} active={location.pathname === path} />
+        ))}
 
-      {/* More drawer trigger */}
-      <Drawer>
-        <Drawer.Trigger>
-          <button
-            type="button"
-            className={`flex flex-col items-center gap-0.5 px-2 py-2 flex-1 text-xs transition-colors
-              ${moreActive ? 'text-primary font-semibold' : 'text-default-400'}`}
-          >
-            <span className="text-xl leading-none">••••</span>
-            <span>{t('general.more')}</span>
-          </button>
-        </Drawer.Trigger>
-        <Drawer.Backdrop>
-          <Drawer.Container>
-            <Drawer.Content>
-              <Drawer.Header>{t('general.more')}</Drawer.Header>
-              <Drawer.Body>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  {MORE_ITEMS.map(({ key, path, icon }) => (
-                    <Link
-                      key={key}
-                      to={path}
-                      className={`flex flex-col items-center gap-1 py-3 rounded-xl text-sm transition-colors
-                        ${location.pathname === path ? 'bg-primary/10 text-primary font-semibold' : 'bg-default-100 text-default-600'}`}
-                    >
-                      <span className="text-2xl leading-none">{icon}</span>
-                      <span>{t(`nav.${key}`)}</span>
-                    </Link>
-                  ))}
-                </div>
-              </Drawer.Body>
-              <Drawer.Footer>
-                <Button color="danger" variant="flat" fullWidth onPress={logout}>
-                  {t('nav.logout')}
-                </Button>
-              </Drawer.Footer>
-            </Drawer.Content>
-          </Drawer.Container>
-        </Drawer.Backdrop>
-      </Drawer>
-    </nav>
+        <button
+          type="button"
+          onClick={() => setMoreOpen(true)}
+          className={`flex flex-col items-center gap-0.5 px-2 py-2 flex-1 text-xs transition-colors
+            ${moreActive ? 'text-primary font-semibold' : 'text-default-400'}`}
+        >
+          <span className="text-xl leading-none">•••</span>
+          <span>{t('general.more')}</span>
+        </button>
+      </nav>
+
+      {/* More overlay */}
+      {moreOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex items-end">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="relative w-full bg-white rounded-t-2xl px-4 pt-4 pb-8 shadow-xl">
+            <div className="w-10 h-1 bg-default-200 rounded-full mx-auto mb-4" />
+            <p className="text-sm font-semibold text-default-500 mb-3">{t('general.more')}</p>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {MORE_ITEMS.map(({ key, path, icon }) => (
+                <Link
+                  key={key}
+                  to={path}
+                  onClick={() => setMoreOpen(false)}
+                  className={`flex flex-col items-center gap-1 py-3 rounded-xl text-sm transition-colors
+                    ${location.pathname === path ? 'bg-primary/10 text-primary font-semibold' : 'bg-default-100 text-default-600'}`}
+                >
+                  <span className="text-2xl leading-none">{icon}</span>
+                  <span>{t(`nav.${key}`)}</span>
+                </Link>
+              ))}
+            </div>
+            <Button color="danger" variant="flat" fullWidth onPress={logout}>
+              {t('nav.logout')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

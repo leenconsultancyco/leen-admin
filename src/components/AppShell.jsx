@@ -40,10 +40,7 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
       <TopBar title={title} pendingCount={pendingCount} />
 
       {/* Main content */}
-      <main
-        className="md:ms-[220px] pt-14 pb-20 md:pt-0 md:pb-0"
-        style={{ padding: '28px 32px' }}
-      >
+      <main className="md:ms-[220px] pt-14 pb-20 md:pt-0 md:pb-0 px-4 md:px-8 py-4 md:py-7">
         {children}
       </main>
 
