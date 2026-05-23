@@ -49,15 +49,17 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
         ) : (
           <>
-            <StatCard icon="📅" label={t('dashboard.todaySessions')}  value={d.todaySessions  ?? 0} color="default" />
-            <StatCard icon="💵" label={t('dashboard.todayRevenue')}   value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="success" />
-            <StatCard icon="📈" label={t('dashboard.monthlyRevenue')} value={`${Number(d.totalRevenue ?? 0).toLocaleString('en-EG')} EGP`}  color="primary" />
+            <StatCard icon="📅" label={t('dashboard.todaySessions')}   value={d.todaySessions  ?? 0} color="default" />
+            <StatCard icon="💵" label={t('dashboard.todayRevenue')}    value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="success" />
+            <StatCard icon="📈" label={t('dashboard.monthlyRevenue')}  value={`${Number(d.totalRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="primary" />
             <StatCard icon="🔔" label={t('dashboard.pendingBookings')} value={d.pendingCount ?? 0} color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'} />
+            <StatCard icon="💸" label={t('dashboard.monthlyExpenses')} value={`${Number(d.totalExpenses ?? 0).toLocaleString('en-EG')} EGP`} color="danger" />
+            <StatCard icon="💰" label={t('dashboard.monthlyProfit')}   value={`${Number((d.totalRevenue ?? 0) - (d.totalExpenses ?? 0)).toLocaleString('en-EG')} EGP`} color={(d.totalRevenue ?? 0) >= (d.totalExpenses ?? 0) ? 'success' : 'danger'} />
           </>
         )}
       </div>
