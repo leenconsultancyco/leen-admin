@@ -227,6 +227,10 @@ function getDashboardData_(month, year) {
   const totalExpenses  = allExpenses
     .filter(e => { const my = monthYear(e.Date); return my.m === month && my.y === year; })
     .reduce((s, e) => s + Number(e.Actual_EGP || 0), 0);
+  const overallRevenue  = allBookings.filter(b => b.Status !== 'Cancelled')
+    .reduce((s, b) => s + Number(b.Revenue_Center || 0), 0);
+  const overallExpenses = allExpenses.reduce((s, e) => s + Number(e.Actual_EGP || 0), 0);
+  const overallProfit   = overallRevenue - overallExpenses;
 
   const recentBookings = allBookings.filter(b => b.Status === 'Pending')
     .sort((a, b_) => new Date(b_.Submitted_At) - new Date(a.Submitted_At)).slice(0, 5);
@@ -257,6 +261,7 @@ function getDashboardData_(month, year) {
   return {
     sessionCount, totalRevenue, totalExpenses, netIncome: totalRevenue - totalExpenses,
     pendingCount, todaySessions, todayRevenue,
+    overallRevenue, overallExpenses, overallProfit,
     recentBookings, recentActivity, monthlyChart,
     lastBackupDate: settings.LAST_BACKUP_DATE || '',
   };

@@ -61,6 +61,7 @@ export default function TherapistEditModal({ therapist, isNew = false, isOpen, o
   const { t } = useI18n();
   const [form, setForm]               = useState(() => initForm(therapist));
   const [saving, setSaving]           = useState(false);
+  const [saveError, setSaveError]     = useState('');
   const [block, setBlock]             = useState({ date: TODAY, timeStart: '', timeEnd: '', reason: '' });
   const [blockSaving, setBlockSaving] = useState(false);
 
@@ -79,12 +80,16 @@ export default function TherapistEditModal({ therapist, isNew = false, isOpen, o
   async function handleSave() {
     if (!form.Name_EN) return;
     setSaving(true);
+    setSaveError('');
     const payload = { ...form, Working_Days: form.workingDays.join(','), Session_Types: form.sessionTypes.join(',') };
-    if (isNew) await addTherapist(payload);
-    else       await updateTherapist(payload);
+    const res = isNew ? await addTherapist(payload) : await updateTherapist(payload);
     setSaving(false);
-    onSuccess();
-    onClose();
+    if (res.success) {
+      onSuccess();
+      onClose();
+    } else {
+      setSaveError(res.error || 'Failed to save. Please check your connection and try again.');
+    }
   }
 
   async function handleBlock() {
@@ -253,6 +258,9 @@ export default function TherapistEditModal({ therapist, isNew = false, isOpen, o
             </Tabs>
           </Modal.Body>
           <Modal.Footer>
+            {saveError && (
+              <p style={{ color: '#ef4444', fontSize: '13px', flex: 1, margin: 0 }}>{saveError}</p>
+            )}
             <Button variant="flat" onPress={onClose}>{t('general.cancel')}</Button>
             <Button color="primary" isDisabled={saving || !form.Name_EN}
               startContent={saving ? <Spinner size="sm" color="white" /> : undefined}

@@ -56,10 +56,10 @@ export default function Dashboard() {
           <>
             <StatCard icon="📅" label={t('dashboard.todaySessions')}   value={d.todaySessions  ?? 0} color="default" />
             <StatCard icon="💵" label={t('dashboard.todayRevenue')}    value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="success" />
-            <StatCard icon="📈" label={t('dashboard.monthlyRevenue')}  value={`${Number(d.totalRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="primary" />
+            <StatCard icon="📈" label={t('dashboard.overallRevenue')}  value={`${Number(d.overallRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="primary" />
             <StatCard icon="🔔" label={t('dashboard.pendingBookings')} value={d.pendingCount ?? 0} color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'} />
-            <StatCard icon="💸" label={t('dashboard.monthlyExpenses')} value={`${Number(d.totalExpenses ?? 0).toLocaleString('en-EG')} EGP`} color="danger" />
-            <StatCard icon="💰" label={t('dashboard.monthlyProfit')}   value={`${Number((d.totalRevenue ?? 0) - (d.totalExpenses ?? 0)).toLocaleString('en-EG')} EGP`} color={(d.totalRevenue ?? 0) >= (d.totalExpenses ?? 0) ? 'success' : 'danger'} />
+            <StatCard icon="💸" label={t('dashboard.overallExpenses')} value={`${Number(d.overallExpenses ?? 0).toLocaleString('en-EG')} EGP`} color="danger" />
+            <StatCard icon="💰" label={t('dashboard.overallProfit')}   value={`${Number(d.overallProfit ?? 0).toLocaleString('en-EG')} EGP`} color={(d.overallProfit ?? 0) >= 0 ? 'success' : 'danger'} />
           </>
         )}
       </div>
