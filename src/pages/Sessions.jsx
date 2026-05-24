@@ -4,7 +4,7 @@ import { getSessions, getTherapistsFull, deleteBooking } from '../api';
 import { buildSessionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
 import DataTable from '../components/DataTable';
-import SessionActions from '../components/SessionActions';
+import SessionActionsMenu from '../components/SessionActionsMenu';
 import SessionEditModal from '../components/SessionEditModal';
 import ConfirmModal from '../components/ConfirmModal';
 import OfflineBanner from '../components/OfflineBanner';
@@ -99,15 +99,12 @@ export default function Sessions() {
       key: '_actions',
       label: t('sessions.actions'),
       render: (r) => (
-        <div className="flex items-center gap-1 flex-wrap">
-          <SessionActions booking={r} onDone={load} />
-          <Button size="sm" variant="flat" onPress={() => setEditing(r)}>
-            {t('general.edit')}
-          </Button>
-          <Button size="sm" color="danger" variant="ghost" onPress={() => setDeleting(r)}>
-            {t('general.delete')}
-          </Button>
-        </div>
+        <SessionActionsMenu
+          booking={r}
+          onDone={load}
+          onEdit={() => setEditing(r)}
+          onDelete={() => setDeleting(r)}
+        />
       ),
     },
   ];

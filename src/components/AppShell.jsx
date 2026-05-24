@@ -45,7 +45,7 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
         {title && (
           <div
             className="-mx-4 md:-mx-8 -mt-4 md:-mt-7 mb-5 md:mb-7 border-b"
-            style={{ backgroundColor: '#edede9', borderColor: '#d4d4d0' }}
+            style={{ backgroundColor: '#F8F9FA', borderColor: '#e2e5e9' }}
           >
             <h1
               className="px-4 md:px-8 py-3 md:py-5 text-xl md:text-2xl font-bold"

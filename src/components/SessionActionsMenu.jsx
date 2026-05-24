@@ -1,0 +1,188 @@
+import { useState, useEffect, useRef } from 'react';
+import { Button, Spinner } from '@heroui/react';
+import { confirmBooking, cancelBooking, markPaid } from '../api';
+import { getIsOnline } from '../hooks/useOnlineStatus';
+import { useI18n } from '../i18n';
+import ConfirmModal from './ConfirmModal';
+
+const PAY_METHODS = ['Cash', 'Bank transfer'];
+
+function MenuItem({ children, onClick, disabled, variant = 'default' }) {
+  const [hovered, setHovered] = useState(false);
+  const colors = {
+    default: { text: '#374151', hover: '#f9fafb' },
+    success: { text: '#16a34a', hover: '#f0fdf4' },
+    danger:  { text: '#ef4444', hover: '#fef2f2' },
+  };
+  const c = colors[variant] || colors.default;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'block', width: '100%', textAlign: 'left',
+        padding: '9px 14px', fontSize: '13px', border: 'none',
+        background: hovered ? c.hover : 'transparent',
+        color: c.text, cursor: disabled ? 'not-allowed' : 'pointer',
+        borderRadius: '6px', opacity: disabled ? 0.45 : 1,
+        transition: 'background 0.1s',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }) {
+  const { t } = useI18n();
+  const online = getIsOnline();
+  const ref    = useRef(null);
+
+  const [open, setOpen]             = useState(false);
+  const [step, setStep]             = useState('menu');
+  const [payMethod, setPayMethod]   = useState('Cash');
+  const [busy, setBusy]             = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+
+  const isPending   = booking.Status === 'Pending';
+  const isConfirmed = booking.Status === 'Confirmed';
+  const isUnpaid    = booking.Payment_Status === 'Unpaid';
+  const hasWorkflow = isPending || isConfirmed;
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setStep('menu');
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open]);
+
+  async function run(fn) {
+    setBusy(true);
+    setOpen(false);
+    setStep('menu');
+    await fn();
+    setBusy(false);
+    onDone();
+  }
+
+  function close() { setOpen(false); setStep('menu'); }
+
+  return (
+    <>
+      <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+        <Button
+          size="sm"
+          variant="flat"
+          isDisabled={busy}
+          startContent={busy ? <Spinner size="sm" /> : undefined}
+          onPress={() => { setOpen((o) => !o); setStep('menu'); }}
+        >
+          {t('sessions.actions') || 'Actions'} ▾
+        </Button>
+
+        {open && (
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
+            backgroundColor: '#fff', border: '1px solid #e5e7eb',
+            borderRadius: '10px', boxShadow: '0 6px 20px rgba(0,0,0,0.10)',
+            minWidth: '170px', overflow: 'hidden', padding: '4px',
+          }}>
+
+            {step === 'menu' && (
+              <>
+                {isPending && (
+                  <MenuItem variant="success" disabled={!online}
+                    onClick={() => run(() => confirmBooking(booking.Booking_ID))}>
+                    ✅ {t('dashboard.confirm')}
+                  </MenuItem>
+                )}
+                {isConfirmed && isUnpaid && (
+                  <MenuItem variant="success" disabled={!online}
+                    onClick={() => setStep('payMethod')}>
+                    💳 {t('sessions.markPaid')}
+                  </MenuItem>
+                )}
+                {(isPending || isConfirmed) && (
+                  <MenuItem variant="danger" disabled={!online}
+                    onClick={() => { close(); setCancelOpen(true); }}>
+                    ✕ {t('dashboard.cancel')}
+                  </MenuItem>
+                )}
+
+                {hasWorkflow && (
+                  <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '4px 0' }} />
+                )}
+
+                <MenuItem onClick={() => { close(); onEdit(); }}>
+                  ✏️ {t('general.edit')}
+                </MenuItem>
+                <MenuItem variant="danger" onClick={() => { close(); onDelete(); }}>
+                  🗑️ {t('general.delete')}
+                </MenuItem>
+              </>
+            )}
+
+            {step === 'payMethod' && (
+              <div style={{ padding: '10px 12px' }}>
+                <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                  {t('sessions.paymentMethod')}
+                </p>
+                <select
+                  value={payMethod}
+                  onChange={(e) => setPayMethod(e.target.value)}
+                  style={{
+                    width: '100%', padding: '6px 10px', borderRadius: '6px',
+                    border: '1.5px solid #d1d5db', fontSize: '13px',
+                    marginBottom: '10px', boxSizing: 'border-box',
+                  }}
+                >
+                  {PAY_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setStep('menu')}
+                    style={{
+                      flex: 1, padding: '6px', fontSize: '12px', borderRadius: '6px',
+                      border: '1.5px solid #d1d5db', background: '#fff', cursor: 'pointer', color: '#6b7280',
+                    }}
+                  >
+                    {t('general.cancel')}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!online}
+                    onClick={() => run(() => markPaid(booking.Booking_ID, payMethod))}
+                    style={{
+                      flex: 1, padding: '6px', fontSize: '12px', fontWeight: '600',
+                      borderRadius: '6px', border: 'none', background: '#0E9B73',
+                      color: '#fff', cursor: 'pointer',
+                    }}
+                  >
+                    {t('general.confirm')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <ConfirmModal
+        isOpen={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onConfirm={() => run(() => cancelBooking(booking.Booking_ID, ''))}
+        title={t('sessions.cancel')}
+        message={`${t('sessions.cancel')} — ${booking.Client_Name}?`}
+      />
+    </>
+  );
+}
