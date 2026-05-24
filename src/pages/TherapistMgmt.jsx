@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Chip, Skeleton } from '@heroui/react';
-import { getTherapistsFull } from '../api';
+import { getTherapistsFull, updateTherapist } from '../api';
 import { useI18n } from '../i18n';
 import TherapistEditModal from '../components/TherapistEditModal';
 
@@ -38,6 +38,7 @@ export default function TherapistMgmt() {
   const [therapists, setTherapists] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
+  const [filter, setFilter]         = useState('all');
   const [editing, setEditing]       = useState(null);
   const [adding, setAdding]         = useState(false);
 
@@ -51,7 +52,14 @@ export default function TherapistMgmt() {
 
   useEffect(load, []);
 
+  async function handleToggleActive(th) {
+    await updateTherapist({ ...th, Active: !th.Active });
+    load();
+  }
+
   const filtered = (Array.isArray(therapists) ? therapists : []).filter((th) => {
+    if (filter === 'active'   &&  !th.Active) return false;
+    if (filter === 'inactive' && !!th.Active) return false;
     const q = search.toLowerCase();
     return !q || th.Name_EN?.toLowerCase().includes(q) || th.Name_AR?.includes(q);
   });
@@ -72,6 +80,22 @@ export default function TherapistMgmt() {
             outline: 'none',
           }}
         />
+        {['all', 'active', 'inactive'].map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setFilter(f)}
+            style={{
+              padding: '5px 14px', borderRadius: '9999px', fontSize: '12px',
+              border: `2px solid ${filter === f ? '#0E9B73' : '#d1d5db'}`,
+              backgroundColor: filter === f ? '#0E9B73' : '#ffffff',
+              color: filter === f ? '#ffffff' : '#4b5563',
+              cursor: 'pointer', fontWeight: filter === f ? '600' : '400',
+            }}
+          >
+            {f === 'all' ? (t('general.all') || 'All') : f === 'active' ? (t('therapistMgmt.active') || 'Active') : (t('therapistMgmt.inactive') || 'Inactive')}
+          </button>
+        ))}
         <Button size="sm" color="primary" onPress={() => setAdding(true)}>
           + {t('therapistMgmt.addTherapist') || 'Add Therapist'}
         </Button>
@@ -99,9 +123,24 @@ export default function TherapistMgmt() {
                   <p className="text-xs text-default-400 truncate">{th.Name_AR}</p>
                   <p className="text-xs text-default-500 mt-0.5">{th.Title_EN}</p>
                 </div>
-                <Button size="sm" variant="flat" onPress={() => setEditing(th)}>
-                  {t('general.edit')}
-                </Button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                  <Button size="sm" variant="flat" onPress={() => setEditing(th)}>
+                    {t('general.edit')}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(th)}
+                    style={{
+                      padding: '3px 10px', borderRadius: '9999px', fontSize: '11px',
+                      border: `1.5px solid ${th.Active ? '#f87171' : '#0E9B73'}`,
+                      backgroundColor: 'transparent',
+                      color: th.Active ? '#ef4444' : '#0E9B73',
+                      cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {th.Active ? (t('therapistMgmt.deactivate') || 'Deactivate') : (t('therapistMgmt.reactivate') || 'Reactivate')}
+                  </button>
+                </div>
               </Card.Content>
             </Card>
           ))}

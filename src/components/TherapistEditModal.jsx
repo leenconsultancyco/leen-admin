@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Button, Modal, Spinner, Switch, Label, Tabs } from '@heroui/react';
+import { Button, Modal, Spinner, Tabs } from '@heroui/react';
 import { addTherapist, updateTherapist, blockDate } from '../api';
 import { useI18n } from '../i18n';
 
@@ -152,9 +152,22 @@ export default function TherapistEditModal({ therapist, isNew = false, isOpen, o
                   <Field label="Languages">
                     <input value={form.Languages || ''} onChange={(e) => set('Languages', e.target.value)} style={F} />
                   </Field>
-                  <Switch isSelected={!!form.Active} onValueChange={(v) => set('Active', v)}>
-                    <Label>{form.Active ? t('therapistMgmt.active') : t('therapistMgmt.inactive')}</Label>
-                  </Switch>
+                  <div style={{ marginTop: '4px' }}>
+                    <p style={LBL}>Status</p>
+                    <button
+                      type="button"
+                      onClick={() => set('Active', !form.Active)}
+                      style={{
+                        padding: '7px 20px', borderRadius: '9999px', cursor: 'pointer',
+                        fontSize: '13px', fontWeight: '600', transition: 'all 0.15s',
+                        border: `2px solid ${form.Active ? '#0E9B73' : '#d1d5db'}`,
+                        backgroundColor: form.Active ? '#0E9B73' : '#ffffff',
+                        color: form.Active ? '#ffffff' : '#4b5563',
+                      }}
+                    >
+                      {form.Active ? (t('therapistMgmt.active') || 'Active') : (t('therapistMgmt.inactive') || 'Inactive')}
+                    </button>
+                  </div>
                 </div>
               </Tabs.Panel>
 
