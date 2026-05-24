@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner } from '@heroui/react';
-import { editExpense } from '../api';
+import { editExpense, getExpenseCategories } from '../api';
 import { useI18n } from '../i18n';
 
-const CATEGORIES = ['Cleaning', 'Coffee & Break', 'Facilities', 'Marketing', 'Salary', 'Initial Cost', 'Other'];
-const METHODS    = ['Cash', 'Bank transfer'];
+const METHODS = ['Cash', 'Bank transfer'];
 
 const F = {
   display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
@@ -16,25 +15,47 @@ const LBL = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom
 
 export default function EditExpenseModal({ expense, isOpen, onClose, onSuccess }) {
   const { t } = useI18n();
-  const [form, setForm]     = useState({});
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
+  const [form, setForm]           = useState({});
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState('');
+  const [catRows, setCatRows]     = useState([]);
+  const [catLoading, setCatLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCatLoading(true);
+    getExpenseCategories().then((r) => {
+      if (r.success && Array.isArray(r.data)) setCatRows(r.data);
+      setCatLoading(false);
+    });
+  }, [isOpen]);
 
   useEffect(() => {
     if (expense) {
       setForm({
-        date:     (expense.Date || '').substring(0, 10),
-        category: expense.Category || 'Cleaning',
-        item:     expense.Item     || '',
-        amount:   String(expense.Actual_EGP || ''),
-        paidBy:   expense.Paid_By  || 'Cash',
-        notes:    expense.Notes    || '',
+        date:        (expense.Date || '').substring(0, 10),
+        category:    expense.Category    || '',
+        subCategory: expense.Sub_Category || '',
+        item:        expense.Item         || '',
+        amount:      String(expense.Actual_EGP || ''),
+        paidBy:      expense.Paid_By      || 'Cash',
+        notes:       expense.Notes        || '',
       });
       setError('');
     }
   }, [expense, isOpen]);
 
+  const categories = useMemo(() => [...new Set(catRows.map((r) => r.Category).filter(Boolean))], [catRows]);
+
+  const subCategories = useMemo(() =>
+    catRows.filter((r) => r.Category === form.category).map((r) => r.Subcategory).filter(Boolean),
+  [catRows, form.category]);
+
   function set(key, val) { setForm((f) => ({ ...f, [key]: val })); }
+
+  function handleCategoryChange(cat) {
+    setForm((f) => ({ ...f, category: cat, subCategory: '' }));
+  }
 
   async function handleSave() {
     if (!form.item)   { setError(t('general.required')); return; }
@@ -45,6 +66,7 @@ export default function EditExpenseModal({ expense, isOpen, onClose, onSuccess }
       expenseId:   expense.Expense_ID,
       date:        form.date,
       category:    form.category,
+      subCategory: form.subCategory,
       item:        form.item,
       actualEGP:   Number(form.amount),
       expectedEGP: Number(form.amount),
@@ -73,12 +95,30 @@ export default function EditExpenseModal({ expense, isOpen, onClose, onSuccess }
               </div>
               <div style={{ flex: 1 }}>
                 <label style={LBL}>{t('expenses.category')}</label>
-                <select value={form.category}
-                  onChange={(e) => set('category', e.target.value)} style={F}>
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                {catLoading ? (
+                  <div style={{ ...F, display: 'flex', alignItems: 'center', gap: '6px', color: '#9ca3af' }}>
+                    <Spinner size="sm" /> Loading…
+                  </div>
+                ) : (
+                  <select value={form.category}
+                    onChange={(e) => handleCategoryChange(e.target.value)} style={F}>
+                    <option value="">— Select —</option>
+                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                )}
               </div>
             </div>
+
+            {subCategories.length > 0 && (
+              <div>
+                <label style={LBL}>{t('expenses.subCategory')}</label>
+                <select value={form.subCategory}
+                  onChange={(e) => set('subCategory', e.target.value)} style={F}>
+                  <option value="">— Select —</option>
+                  {subCategories.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
 
             <div>
               <label style={LBL}>{t('expenses.item')} *</label>

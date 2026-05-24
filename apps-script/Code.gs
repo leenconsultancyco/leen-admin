@@ -117,8 +117,9 @@ function doGet(e) {
       case 'getPayouts':       return ok(getPayouts_(month, year));
       case 'getClients':       return ok(sheetToObjects(getSheet('Clients')));
       case 'getTherapistsFull':return ok(sheetToObjects(getSheet('Therapists')));
-      case 'getSettings':      return ok(getSettings_());
-      case 'backup':           return ok(backup_());
+      case 'getSettings':          return ok(getSettings_());
+      case 'getExpenseCategories': return ok(getExpenseCategories_());
+      case 'backup':               return ok(backup_());
       default: return err('Unknown action: ' + action);
     }
   } catch (e) { return err(e.message); }
@@ -341,6 +342,16 @@ function getPayouts_(month, year) {
 }
 
 // ---------------------------------------------------------------------------
+// GET — Expense Categories (from Expense_Categories tab)
+// ---------------------------------------------------------------------------
+
+function getExpenseCategories_() {
+  const sheet = getSheet('Expense_Categories');
+  if (!sheet) return [];
+  return sheetToObjects(sheet);
+}
+
+// ---------------------------------------------------------------------------
 // GET — Settings (excludes password hash)
 // ---------------------------------------------------------------------------
 
@@ -485,7 +496,7 @@ function addExpense_(body) {
   const actual   = Number(body.actualEGP   || 0);
   const expected = Number(body.expectedEGP || 0);
   getSheet('Expenses').appendRow([
-    id, date, month, body.category, body.item,
+    id, date, month, body.category, body.subCategory || '', body.item,
     expected, actual, actual - expected,
     body.paidBy || 'Cash', body.idempotencyKey, body.notes || ''
   ]);
@@ -510,7 +521,7 @@ function editExpense_(body) {
       const expected = Number(body.expectedEGP || actual);
       const updates  = {
         Date: date, Month: month,
-        Category: body.category, Item: body.item,
+        Category: body.category, Sub_Category: body.subCategory || '', Item: body.item,
         Expected_EGP: expected, Actual_EGP: actual,
         Variance: actual - expected,
         Paid_By: body.paidBy, Notes: body.notes || '',

@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner } from '@heroui/react';
-import { addExpense } from '../api';
+import { addExpense, getExpenseCategories } from '../api';
 import { useI18n } from '../i18n';
 
-const CATEGORIES = ['Cleaning', 'Coffee & Break', 'Facilities', 'Marketing', 'Salary', 'Initial Cost', 'Other'];
-const METHODS    = ['Cash', 'Bank transfer'];
-const TODAY      = new Date().toISOString().slice(0, 10);
-const BLANK      = { date: TODAY, category: 'Cleaning', item: '', amount: '', paidBy: 'Cash', notes: '' };
+const METHODS = ['Cash', 'Bank transfer'];
+const TODAY   = new Date().toISOString().slice(0, 10);
+const BLANK   = { date: TODAY, category: '', subCategory: '', item: '', amount: '', paidBy: 'Cash', notes: '' };
 
 const F = {
   display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
@@ -18,12 +17,33 @@ const LBL = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom
 
 export default function AddExpenseModal({ isOpen, onClose, onSuccess }) {
   const { t } = useI18n();
-  const [form, setForm]       = useState(BLANK);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState('');
-  const [queued, setQueued]   = useState(false);
+  const [form, setForm]           = useState(BLANK);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState('');
+  const [queued, setQueued]       = useState(false);
+  const [catRows, setCatRows]     = useState([]);
+  const [catLoading, setCatLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCatLoading(true);
+    getExpenseCategories().then((r) => {
+      if (r.success && Array.isArray(r.data)) setCatRows(r.data);
+      setCatLoading(false);
+    });
+  }, [isOpen]);
+
+  const categories = useMemo(() => [...new Set(catRows.map((r) => r.Category).filter(Boolean))], [catRows]);
+
+  const subCategories = useMemo(() =>
+    catRows.filter((r) => r.Category === form.category).map((r) => r.Subcategory).filter(Boolean),
+  [catRows, form.category]);
 
   function set(key, val) { setForm((f) => ({ ...f, [key]: val })); }
+
+  function handleCategoryChange(cat) {
+    setForm((f) => ({ ...f, category: cat, subCategory: '' }));
+  }
 
   function handleClose() {
     setForm(BLANK);
@@ -39,18 +59,18 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }) {
     setQueued(false);
     setSaving(true);
     const result = await addExpense({
-      date: form.date,
-      category: form.category,
-      item: form.item,
+      date:        form.date,
+      category:    form.category,
+      subCategory: form.subCategory,
+      item:        form.item,
       actualEGP:   Number(form.amount),
       expectedEGP: Number(form.amount),
-      paidBy: form.paidBy,
-      notes: form.notes,
+      paidBy:      form.paidBy,
+      notes:       form.notes,
     });
     setSaving(false);
 
     if (result.queued) {
-      // Request queued for offline sync — close but warn the user
       setQueued(true);
       return;
     }
@@ -97,12 +117,30 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }) {
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={LBL}>{t('expenses.category')}</label>
-                    <select value={form.category}
-                      onChange={(e) => set('category', e.target.value)} style={F}>
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    {catLoading ? (
+                      <div style={{ ...F, display: 'flex', alignItems: 'center', gap: '6px', color: '#9ca3af' }}>
+                        <Spinner size="sm" /> Loading…
+                      </div>
+                    ) : (
+                      <select value={form.category}
+                        onChange={(e) => handleCategoryChange(e.target.value)} style={F}>
+                        <option value="">— Select —</option>
+                        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    )}
                   </div>
                 </div>
+
+                {subCategories.length > 0 && (
+                  <div>
+                    <label style={LBL}>{t('expenses.subCategory')}</label>
+                    <select value={form.subCategory}
+                      onChange={(e) => set('subCategory', e.target.value)} style={F}>
+                      <option value="">— Select —</option>
+                      {subCategories.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label style={LBL}>{t('expenses.item')} *</label>

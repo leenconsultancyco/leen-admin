@@ -72,8 +72,9 @@ export default function Expenses() {
   const columns = [
     { key: 'Date', label: t('sessions.date'), sortable: true,
       render: (r) => <span>{String(r.Date || '').substring(0, 10)}</span> },
-    { key: 'Category',   label: t('expenses.category'), sortable: true },
-    { key: 'Item',       label: t('expenses.item') },
+    { key: 'Category',    label: t('expenses.category'),    sortable: true },
+    { key: 'Sub_Category',label: t('expenses.subCategory'), sortable: true },
+    { key: 'Item',        label: t('expenses.item') },
     { key: 'Actual_EGP', label: t('expenses.amount'),
       render: (r) => <span dir="ltr">{fmt(r.Actual_EGP)}</span> },
     { key: 'Paid_By',    label: t('expenses.paidBy') },

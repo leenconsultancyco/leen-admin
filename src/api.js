@@ -98,6 +98,14 @@ export async function getExpenses(month, year) {
   }
 }
 
+export async function getExpenseCategories() {
+  try {
+    return await get('getExpenseCategories');
+  } catch {
+    return errorEnvelope('Failed to load expense categories');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // GET — Payouts
 // ---------------------------------------------------------------------------
