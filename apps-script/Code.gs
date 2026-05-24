@@ -147,6 +147,9 @@ function doPost(e) {
       case 'addTherapist':    return ok(addTherapist_(body));
       case 'updateTherapist': return ok(updateTherapist_(body));
       case 'blockDate':       return ok(blockDate_(body));
+      case 'editBooking':     return ok(editBooking_(body));
+      case 'deleteBooking':   return ok(deleteBooking_(body.bookingId));
+      case 'addBookingAdmin': return ok(addBookingAdmin_(body));
       case 'markPayoutPaid':  return ok(markPayoutPaid_(body));
       case 'updatePassword':  return ok(updatePassword_(body.newHash));
       case 'updateSettings':  return ok(updateSettings_(body.settings));
@@ -615,6 +618,120 @@ function updateTherapist_(body) {
     }
   }
   return { therapistId: body.Therapist_ID };
+}
+
+// ---------------------------------------------------------------------------
+// POST — Edit Booking (admin)
+// ---------------------------------------------------------------------------
+
+function editBooking_(body) {
+  const sheet   = getSheet('Bookings');
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol   = headers.indexOf('Booking_ID');
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idCol] === body.Booking_ID) {
+      // Therapist/session-type change — recalculate fees
+      const oldTherapistId  = data[i][headers.indexOf('Therapist_ID')];
+      const newTherapistId  = body.Therapist_ID || oldTherapistId;
+      const oldSessionType  = data[i][headers.indexOf('Session_Type')];
+      const newSessionType  = body.Session_Type || oldSessionType;
+
+      if (newTherapistId !== oldTherapistId || newSessionType !== oldSessionType) {
+        const th = sheetToObjects(getSheet('Therapists')).find(t => t.Therapist_ID === newTherapistId);
+        if (th) {
+          const fee    = Number(th['Fee_' + newSessionType] || th.Fee_Individual || 0);
+          const share  = Number(th.Revenue_Share_Pct || 70) / 100;
+          const revTh  = Math.round(fee * share);
+          const revCt  = fee - revTh;
+          const feeMap = { Therapist_ID: th.Therapist_ID, Therapist_Name: th.Name_EN,
+                           Fee: fee, Revenue_Therapist: revTh, Revenue_Center: revCt };
+          Object.entries(feeMap).forEach(([col, val]) => {
+            const j = headers.indexOf(col);
+            if (j >= 0) sheet.getRange(i + 1, j + 1).setValue(val);
+          });
+        }
+      }
+
+      // Update standard editable fields
+      ['Client_Name','Client_Phone','Client_Email',
+       'Session_Date','Session_Time','Session_Type','Session_Mode','Video_Link',
+       'Status','Payment_Status','Payment_Method','Notes'].forEach(col => {
+        if (body[col] !== undefined) {
+          const j = headers.indexOf(col);
+          if (j >= 0) sheet.getRange(i + 1, j + 1).setValue(body[col]);
+        }
+      });
+
+      return { bookingId: body.Booking_ID };
+    }
+  }
+  throw new Error('Booking not found');
+}
+
+// ---------------------------------------------------------------------------
+// POST — Delete Booking (admin)
+// ---------------------------------------------------------------------------
+
+function deleteBooking_(bookingId) {
+  const sheet   = getSheet('Bookings');
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol   = headers.indexOf('Booking_ID');
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idCol] === bookingId) {
+      sheet.deleteRow(i + 1);
+      return { deleted: true };
+    }
+  }
+  throw new Error('Booking not found');
+}
+
+// ---------------------------------------------------------------------------
+// POST — Add Booking (admin — bypasses client booking flow)
+// ---------------------------------------------------------------------------
+
+function addBookingAdmin_(body) {
+  if (findByIdempotencyKey('Bookings', body.idempotencyKey)) return { bookingId: 'DUPLICATE' };
+
+  const therapist = sheetToObjects(getSheet('Therapists')).find(t => t.Therapist_ID === body.Therapist_ID);
+  if (!therapist) throw new Error('Therapist not found');
+
+  const feeKey = 'Fee_' + (body.Session_Type || 'Individual');
+  const fee    = Number(therapist[feeKey] || therapist.Fee_Individual || 0);
+  const share  = Number(therapist.Revenue_Share_Pct || 70) / 100;
+  const revTh  = Math.round(fee * share);
+  const revCt  = fee - revTh;
+
+  const year      = new Date().getFullYear();
+  const bookingId = nextId('Bookings', 'B', year);
+
+  const clients = sheetToObjects(getSheet('Clients'));
+  let client    = clients.find(c => c.Phone === (body.Client_Phone || ''));
+  if (!client) {
+    const clientId = nextClientId();
+    getSheet('Clients').appendRow([
+      clientId, body.Client_Name, body.Client_Phone || '', body.Client_Email || '',
+      body.Session_Date, therapist.Therapist_ID, 0, 'Active', '', now_()
+    ]);
+    client = { Client_ID: clientId };
+  }
+
+  const status      = body.Status || 'Confirmed';
+  const confirmedAt = status === 'Confirmed' ? now_() : '';
+
+  getSheet('Bookings').appendRow([
+    bookingId, now_(), body.Session_Date, body.Session_Time || '',
+    therapist.Therapist_ID, therapist.Name_EN,
+    client.Client_ID, body.Client_Name, body.Client_Phone || '', body.Client_Email || '',
+    body.Session_Type || 'Individual', body.Session_Mode || 'In-person',
+    fee, revTh, revCt,
+    status, body.Payment_Status || 'Unpaid', body.Payment_Method || '',
+    body.Video_Link || '', false, confirmedAt, body.idempotencyKey, body.Notes || ''
+  ]);
+
+  return { bookingId };
 }
 
 // ---------------------------------------------------------------------------

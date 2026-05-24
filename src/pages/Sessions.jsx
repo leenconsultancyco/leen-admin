@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Chip } from '@heroui/react';
-import { getSessions, getTherapistsFull } from '../api';
+import { getSessions, getTherapistsFull, deleteBooking } from '../api';
 import { buildSessionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
 import DataTable from '../components/DataTable';
 import SessionActions from '../components/SessionActions';
+import SessionEditModal from '../components/SessionEditModal';
+import ConfirmModal from '../components/ConfirmModal';
 import OfflineBanner from '../components/OfflineBanner';
 
 const STATUSES = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
@@ -38,9 +40,13 @@ export default function Sessions() {
   const [therapistId, setTherapistId] = useState('');
   const [status, setStatus]         = useState('');
   const [payment, setPayment]       = useState('');
-  const [sessions, setSessions]     = useState([]);
-  const [therapists, setTherapists] = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [sessions, setSessions]       = useState([]);
+  const [therapists, setTherapists]   = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [adding, setAdding]           = useState(false);
+  const [editingSession, setEditing]  = useState(null);
+  const [deletingSession, setDeleting]= useState(null);
+  const [deleting, setDelBusy]        = useState(false);
 
   const years  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -68,6 +74,15 @@ export default function Sessions() {
 
   const fmt = (n) => `${Number(n).toLocaleString('en-EG')} EGP`;
 
+  async function handleDelete() {
+    if (!deletingSession) return;
+    setDelBusy(true);
+    await deleteBooking(deletingSession.Booking_ID);
+    setDelBusy(false);
+    setDeleting(null);
+    load();
+  }
+
   const columns = [
     { key: 'Client_Name',       label: t('sessions.client'),        sortable: true },
     { key: 'Therapist_Name',    label: t('sessions.therapist'),     sortable: true },
@@ -80,7 +95,21 @@ export default function Sessions() {
     { key: 'Revenue_Center',    label: t('sessions.centerShare'),   render: (r) => <span dir="ltr">{fmt(r.Revenue_Center)}</span> },
     { key: 'Status',            label: t('sessions.status'),        render: (r) => <Chip size="sm" color={statusColor(r.Status)} variant="flat">{r.Status}</Chip> },
     { key: 'Payment_Status',    label: t('sessions.payment'),       render: (r) => <Chip size="sm" color={r.Payment_Status === 'Paid' ? 'success' : 'warning'} variant="flat">{r.Payment_Status}</Chip> },
-    { key: '_actions',          label: t('sessions.actions'),       render: (r) => <SessionActions booking={r} onDone={load} /> },
+    {
+      key: '_actions',
+      label: t('sessions.actions'),
+      render: (r) => (
+        <div className="flex items-center gap-1 flex-wrap">
+          <SessionActions booking={r} onDone={load} />
+          <Button size="sm" variant="flat" onPress={() => setEditing(r)}>
+            {t('general.edit')}
+          </Button>
+          <Button size="sm" color="danger" variant="ghost" onPress={() => setDeleting(r)}>
+            {t('general.delete')}
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -100,6 +129,9 @@ export default function Sessions() {
         <Button size="sm" variant="flat" onPress={() => buildSessionsExcel(filtered, month, year)}>
           {t('sessions.export')}
         </Button>
+        <Button size="sm" color="primary" onPress={() => setAdding(true)}>
+          + {t('sessions.addSession') || 'Add Session'}
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -117,6 +149,35 @@ export default function Sessions() {
       </div>
 
       <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
+
+      <SessionEditModal
+        isNew={true}
+        booking={null}
+        isOpen={adding}
+        onClose={() => setAdding(false)}
+        onSuccess={() => { setAdding(false); load(); }}
+        therapists={therapists}
+      />
+
+      {editingSession && (
+        <SessionEditModal
+          isNew={false}
+          booking={editingSession}
+          isOpen={!!editingSession}
+          onClose={() => setEditing(null)}
+          onSuccess={() => { setEditing(null); load(); }}
+          therapists={therapists}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={!!deletingSession}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title="Delete Session"
+        message={deletingSession ? `Delete session for ${deletingSession.Client_Name} on ${deletingSession.Session_Date}? This cannot be undone.` : ''}
+        confirmColor="danger"
+      />
     </div>
   );
 }

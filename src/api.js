@@ -166,6 +166,18 @@ export async function markPaid(bookingId, paymentMethod) {
   return post('markPaid', { bookingId, paymentMethod });
 }
 
+export async function editBooking(bookingData) {
+  return post('editBooking', bookingData);
+}
+
+export async function deleteBooking(bookingId) {
+  return post('deleteBooking', { bookingId });
+}
+
+export async function addBookingAdmin(bookingData) {
+  return post('addBookingAdmin', bookingData);
+}
+
 // ---------------------------------------------------------------------------
 // POST — Financial writes
 // ---------------------------------------------------------------------------
