@@ -32,8 +32,9 @@ export default function Expenses() {
   const [year, setYear]             = useState(String(NOW.getFullYear()));
   const [rows, setRows]             = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [addOpen, setAddOpen]       = useState(false);
-  const [editingRow, setEditingRow] = useState(null);
+  const [addOpen, setAddOpen]           = useState(false);
+  const [duplicatingRow, setDuplicatingRow] = useState(null);
+  const [editingRow, setEditingRow]     = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const load = () => {
@@ -82,16 +83,22 @@ export default function Expenses() {
     {
       key: '_actions', label: '',
       render: (r) => (
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
           <button
             onClick={(e) => { e.stopPropagation(); setEditingRow(r); }}
-            style={{ fontSize: '13px', color: '#0E9B73', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+            style={{ fontSize: '12px', color: '#0E9B73', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
           >
             ✏️ {t('general.edit')}
           </button>
           <button
+            onClick={(e) => { e.stopPropagation(); setDuplicatingRow(r); setAddOpen(true); }}
+            style={{ fontSize: '12px', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', whiteSpace: 'nowrap' }}
+          >
+            📋 {t('expenses.newFromThis') || 'New'}
+          </button>
+          <button
             onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }}
-            style={{ fontSize: '13px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+            style={{ fontSize: '12px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
           >
             🗑️
           </button>
@@ -108,7 +115,7 @@ export default function Expenses() {
           options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
         <FilterSelect value={year} onChange={setYear} label=""
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
-        <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>+ {t('expenses.addExpense')}</Button>
+        <Button size="sm" color="primary" onPress={() => { setDuplicatingRow(null); setAddOpen(true); }}>+ {t('expenses.addExpense')}</Button>
         <Button size="sm" variant="flat" onPress={() => buildExpensesExcel(rows, month, year)}>{t('expenses.export')}</Button>
       </div>
 
@@ -132,7 +139,12 @@ export default function Expenses() {
 
       <DataTable columns={columns} data={rows} loading={loading} emptyMessage={t('general.noResults')} />
 
-      <AddExpenseModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSuccess={load} />
+      <AddExpenseModal
+        isOpen={addOpen}
+        initialData={duplicatingRow}
+        onClose={() => { setAddOpen(false); setDuplicatingRow(null); }}
+        onSuccess={() => { setAddOpen(false); setDuplicatingRow(null); load(); }}
+      />
 
       <EditExpenseModal
         expense={editingRow}

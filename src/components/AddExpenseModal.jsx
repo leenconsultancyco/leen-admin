@@ -15,7 +15,7 @@ const F = {
 };
 const LBL = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' };
 
-export default function AddExpenseModal({ isOpen, onClose, onSuccess }) {
+export default function AddExpenseModal({ isOpen, onClose, onSuccess, initialData = null }) {
   const { t } = useI18n();
   const [form, setForm]           = useState(BLANK);
   const [saving, setSaving]       = useState(false);
@@ -26,12 +26,23 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }) {
 
   useEffect(() => {
     if (!isOpen) return;
+    setError('');
+    setQueued(false);
+    setForm(initialData ? {
+      date:        (initialData.Date || '').substring(0, 10) || TODAY,
+      category:    initialData.Category     || '',
+      subCategory: initialData.Sub_Category || '',
+      item:        initialData.Item          || '',
+      amount:      String(initialData.Actual_EGP || ''),
+      paidBy:      initialData.Paid_By       || 'Cash',
+      notes:       initialData.Notes         || '',
+    } : BLANK);
     setCatLoading(true);
     getExpenseCategories().then((r) => {
       if (r.success && Array.isArray(r.data)) setCatRows(r.data);
       setCatLoading(false);
     });
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   const categories = useMemo(() => [...new Set(catRows.map((r) => r.Category).filter(Boolean))], [catRows]);
 
@@ -87,7 +98,11 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }) {
     <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <Modal.Container>
         <Modal.Dialog>
-          <Modal.Header>{t('expenses.addExpense')}</Modal.Header>
+          <Modal.Header>
+            {initialData
+              ? <>{t('expenses.addExpense')} <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 400 }}>— from {initialData.Expense_ID}</span></>
+              : t('expenses.addExpense')}
+          </Modal.Header>
           <Modal.Body className="flex flex-col gap-1">
 
             {queued ? (
