@@ -38,27 +38,43 @@ function MenuItem({ children, onClick, disabled, variant = 'default' }) {
 
 export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }) {
   const { t } = useI18n();
-  const online = getIsOnline();
-  const ref    = useRef(null);
+  const online     = getIsOnline();
+  const btnRef     = useRef(null);
+  const dropRef    = useRef(null);
 
-  const [open, setOpen]             = useState(false);
-  const [step, setStep]             = useState('menu');
-  const [payMethod, setPayMethod]   = useState('Cash');
-  const [busy, setBusy]             = useState(false);
+  const [open, setOpen]           = useState(false);
+  const [step, setStep]           = useState('menu');
+  const [payMethod, setPayMethod] = useState('Cash');
+  const [busy, setBusy]           = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [dropPos, setDropPos]     = useState({ top: 0, right: 0, openUp: false });
 
   const isPending   = booking.Status === 'Pending';
   const isConfirmed = booking.Status === 'Confirmed';
   const isUnpaid    = booking.Payment_Status === 'Unpaid';
   const hasWorkflow = isPending || isConfirmed;
 
+  function handleToggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - r.bottom;
+      setDropPos({
+        right:  window.innerWidth - r.right,
+        top:    r.bottom + 4,
+        bottom: window.innerHeight - r.top + 4,
+        openUp: spaceBelow < 240,
+      });
+    }
+    setOpen((o) => !o);
+    setStep('menu');
+  }
+
   useEffect(() => {
     if (!open) return;
     function handleOutside(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-        setStep('menu');
-      }
+      const inBtn  = btnRef.current?.contains(e.target);
+      const inDrop = dropRef.current?.contains(e.target);
+      if (!inBtn && !inDrop) { setOpen(false); setStep('menu'); }
     }
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
@@ -75,26 +91,35 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
 
   function close() { setOpen(false); setStep('menu'); }
 
+  const dropStyle = {
+    position: 'fixed',
+    right: dropPos.right,
+    zIndex: 9999,
+    backgroundColor: '#fff', border: '1px solid #e5e7eb',
+    borderRadius: '10px', boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+    minWidth: '175px', overflow: 'hidden', padding: '4px',
+    ...(dropPos.openUp
+      ? { bottom: dropPos.bottom, top: 'auto' }
+      : { top: dropPos.top, bottom: 'auto' }),
+  };
+
   return (
     <>
-      <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-        <Button
-          size="sm"
-          variant="flat"
-          isDisabled={busy}
-          startContent={busy ? <Spinner size="sm" /> : undefined}
-          onPress={() => { setOpen((o) => !o); setStep('menu'); }}
-        >
-          {t('sessions.actions') || 'Actions'} ▾
-        </Button>
+      <div style={{ display: 'inline-block' }}>
+        <div ref={btnRef}>
+          <Button
+            size="sm"
+            variant="flat"
+            isDisabled={busy}
+            startContent={busy ? <Spinner size="sm" /> : undefined}
+            onPress={handleToggle}
+          >
+            {t('sessions.actions') || 'Actions'} ▾
+          </Button>
+        </div>
 
         {open && (
-          <div style={{
-            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 60,
-            backgroundColor: '#fff', border: '1px solid #e5e7eb',
-            borderRadius: '10px', boxShadow: '0 6px 20px rgba(0,0,0,0.10)',
-            minWidth: '170px', overflow: 'hidden', padding: '4px',
-          }}>
+          <div ref={dropRef} style={dropStyle}>
 
             {step === 'menu' && (
               <>
@@ -147,26 +172,16 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
                   {PAY_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setStep('menu')}
-                    style={{
-                      flex: 1, padding: '6px', fontSize: '12px', borderRadius: '6px',
-                      border: '1.5px solid #d1d5db', background: '#fff', cursor: 'pointer', color: '#6b7280',
-                    }}
-                  >
+                  <button type="button" onClick={() => setStep('menu')}
+                    style={{ flex: 1, padding: '6px', fontSize: '12px', borderRadius: '6px',
+                      border: '1.5px solid #d1d5db', background: '#fff', cursor: 'pointer', color: '#6b7280' }}>
                     {t('general.cancel')}
                   </button>
-                  <button
-                    type="button"
-                    disabled={!online}
+                  <button type="button" disabled={!online}
                     onClick={() => run(() => markPaid(booking.Booking_ID, payMethod))}
-                    style={{
-                      flex: 1, padding: '6px', fontSize: '12px', fontWeight: '600',
+                    style={{ flex: 1, padding: '6px', fontSize: '12px', fontWeight: '600',
                       borderRadius: '6px', border: 'none', background: '#0E9B73',
-                      color: '#fff', cursor: 'pointer',
-                    }}
-                  >
+                      color: '#fff', cursor: 'pointer' }}>
                     {t('general.confirm')}
                   </button>
                 </div>
