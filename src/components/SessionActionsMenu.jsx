@@ -187,6 +187,7 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
                         cashIn: Number(booking.Fee),
                         method: payMethod,
                         bookingId: booking.Booking_ID,
+                        idempotencyKey: `txn-paid-${booking.Booking_ID}`,
                       });
                     })}
                     style={{ flex: 1, padding: '6px', fontSize: '12px', fontWeight: '600',

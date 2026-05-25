@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner } from '@heroui/react';
-import { addExpense, getExpenseCategories } from '../api';
+import { addExpense, addTransaction, getExpenseCategories } from '../api';
 import { useI18n } from '../i18n';
 
 const METHODS = ['Cash', 'Bank transfer'];
@@ -69,29 +69,46 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess, initialDat
     setError('');
     setQueued(false);
     setSaving(true);
-    const result = await addExpense({
+
+    const expenseIKey = crypto.randomUUID();
+    const amount = Number(form.amount);
+
+    const expResult = await addExpense({
       date:        form.date,
       category:    form.category,
       subCategory: form.subCategory,
       item:        form.item,
-      actualEGP:   Number(form.amount),
-      expectedEGP: Number(form.amount),
+      actualEGP:   amount,
+      expectedEGP: amount,
       paidBy:      form.paidBy,
       notes:       form.notes,
+      idempotencyKey: expenseIKey,
     });
+
+    if (!expResult.success && !expResult.queued) {
+      setSaving(false);
+      setError(expResult.error || t('general.error'));
+      return;
+    }
+
+    await addTransaction({
+      date:           form.date,
+      description:    form.item,
+      category:       form.category,
+      cashOut:        amount,
+      method:         form.paidBy,
+      idempotencyKey: `txn-exp-${expenseIKey}`,
+    });
+
     setSaving(false);
 
-    if (result.queued) {
+    if (expResult.queued) {
       setQueued(true);
       return;
     }
-    if (result.success) {
-      setForm(BLANK);
-      onSuccess();
-      onClose();
-    } else {
-      setError(result.error || t('general.error'));
-    }
+    setForm(BLANK);
+    onSuccess();
+    onClose();
   }
 
   return (

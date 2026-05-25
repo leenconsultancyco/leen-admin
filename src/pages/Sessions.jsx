@@ -103,7 +103,17 @@ export default function Sessions() {
     { key: 'Revenue_Therapist', label: t('sessions.therapistShare'), render: (r) => <span dir="ltr">{fmt(r.Revenue_Therapist)}</span> },
     { key: 'Revenue_Center',    label: t('sessions.centerShare'),   render: (r) => <span dir="ltr">{fmt(r.Revenue_Center)}</span> },
     { key: 'Status',            label: t('sessions.status'),        render: (r) => <Chip size="sm" color={statusColor(r.Status)} variant="flat">{r.Status}</Chip> },
-    { key: 'Payment_Status',    label: t('sessions.payment'),       render: (r) => <Chip size="sm" color={r.Payment_Status === 'Paid' ? 'success' : 'warning'} variant="flat">{r.Payment_Status}</Chip> },
+    { key: 'Payment_Status',    label: t('sessions.payment'),       render: (r) => {
+      if (r.Status === 'Cancelled' && r.Payment_Status === 'Paid') {
+        return (
+          <div className="flex flex-col gap-0.5">
+            <Chip size="sm" color="success" variant="flat">Paid</Chip>
+            <span className="text-xs font-semibold" style={{ color: '#d97706' }}>⚠ Refund?</span>
+          </div>
+        );
+      }
+      return <Chip size="sm" color={r.Payment_Status === 'Paid' ? 'success' : 'warning'} variant="flat">{r.Payment_Status}</Chip>;
+    }},
     {
       key: '_actions',
       label: t('sessions.actions'),
