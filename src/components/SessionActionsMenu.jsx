@@ -76,8 +76,8 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
       const inDrop = dropRef.current?.contains(e.target);
       if (!inBtn && !inDrop) { setOpen(false); setStep('menu'); }
     }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
+    document.addEventListener('mousedown', handleOutside, true);
+    return () => document.removeEventListener('mousedown', handleOutside, true);
   }, [open]);
 
   async function run(fn) {

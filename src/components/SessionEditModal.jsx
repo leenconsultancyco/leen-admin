@@ -119,7 +119,7 @@ function SlotPicker({ therapistId, date, sessions, bookingId, value, onChange })
 function initForm(booking, isNew) {
   if (isNew) {
     return {
-      Therapist_ID: '', Session_Date: TODAY, Session_Time: '',
+      Therapist_ID: '', Session_Date: TODAY, Session_Time: '09:00',
       Session_Type: 'Individual', Session_Mode: 'In-person', Video_Link: '',
       Client_Name: '', Client_Phone: '', Client_Email: '',
       Status: 'Confirmed', Payment_Status: 'Unpaid', Payment_Method: 'Cash', Notes: '',
