@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Modal, Spinner } from '@heroui/react';
 import { addTransaction } from '../api';
+import { toast } from './Toast';
 import { useI18n } from '../i18n';
 
 const CATEGORIES = ['Revenue', 'Salary', 'Rent', 'Marketing', 'Admin', 'Initial_Cost', 'Other'];
@@ -38,7 +39,8 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
       method: form.method, notes: form.notes,
     });
     setSaving(false);
-    if (result.success) { setForm(BLANK); onSuccess(); onClose(); }
+    if (result.queued) { toast('Saved offline — will sync when connected', 'warning'); setForm(BLANK); onSuccess(); onClose(); return; }
+    if (result.success) { toast('Transaction saved'); setForm(BLANK); onSuccess(); onClose(); }
     else setError(result.error || t('general.error'));
   }
 

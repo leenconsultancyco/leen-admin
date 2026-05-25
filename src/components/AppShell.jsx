@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
+import ToastContainer from './Toast';
 import { getDashboardData } from '../api';
 import { getIsOnline } from '../hooks/useOnlineStatus';
 
@@ -60,6 +61,8 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
 
       {/* Mobile bottom nav */}
       <BottomNav />
+
+      <ToastContainer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner } from '@heroui/react';
 import { addExpense, addTransaction, getExpenseCategories } from '../api';
+import { toast } from './Toast';
 import { useI18n } from '../i18n';
 
 const METHODS = ['Cash', 'Bank transfer'];
@@ -103,9 +104,11 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess, initialDat
     setSaving(false);
 
     if (expResult.queued) {
+      toast('Saved offline — will sync when connected', 'warning');
       setQueued(true);
       return;
     }
+    toast('Expense saved');
     setForm(BLANK);
     onSuccess();
     onClose();

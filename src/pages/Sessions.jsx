@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Chip } from '@heroui/react';
-import { getSessions, getTherapistsFull, deleteBooking } from '../api';
+import { getSessions, getTherapistsFull, deleteBooking, deleteTransactionByBookingId } from '../api';
+import { toast } from '../components/Toast';
 import { buildSessionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
 import DataTable from '../components/DataTable';
@@ -86,6 +87,10 @@ export default function Sessions() {
     if (!deletingSession) return;
     setDelBusy(true);
     await deleteBooking(deletingSession.Booking_ID);
+    if (deletingSession.Payment_Status === 'Paid') {
+      await deleteTransactionByBookingId(deletingSession.Booking_ID);
+    }
+    toast('Session deleted');
     setDelBusy(false);
     setDeleting(null);
     load();

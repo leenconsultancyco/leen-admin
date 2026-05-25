@@ -60,3 +60,11 @@ html, body, * {
 [data-theme="green"]  { --color-primary: oklch(0.45 0.15 145); --sidebar-bg: oklch(0.22 0.10 145); }
 [data-theme="red"]    { --color-primary: oklch(0.50 0.22 25);  --sidebar-bg: oklch(0.22 0.12 25);  }
 [data-theme="purple"] { --color-primary: oklch(0.40 0.20 300); --sidebar-bg: oklch(0.20 0.12 300); }
+
+@keyframes leenToastIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.leen-toast {
+  animation: leenToastIn 0.18s ease forwards;
+}

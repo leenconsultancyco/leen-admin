@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner, Tabs } from '@heroui/react';
-import { addBookingAdmin, editBooking, getAvailableSlots } from '../api';
+import { addBookingAdmin, editBooking, getAvailableSlots, addTransaction, deleteTransactionByBookingId } from '../api';
+import { toast } from './Toast';
 
 function to12h(t) {
   if (!t) return t;
@@ -124,6 +125,52 @@ function SlotPicker({ therapistId, date, sessions, bookingId, value, onChange })
   );
 }
 
+// Resolves the fee for a therapist + session type from the therapists list.
+function resolveFee(therapists, therapistId, sessionType, fallback) {
+  const th = (therapists || []).find((t) => t.Therapist_ID === therapistId);
+  return th ? Number(th[`Fee_${sessionType}`] || th.Fee_Individual || 0) : Number(fallback || 0);
+}
+
+// Called after a successful editBooking to keep Cash Flow in sync.
+// Four cases based on before/after Payment_Status and fee-affecting field changes.
+async function syncCashFlowTransaction(original, form, therapists) {
+  const wasPaid      = original.Payment_Status === 'Paid';
+  const isPaid       = form.Payment_Status     === 'Paid';
+  const feeChanged   = original.Therapist_ID !== form.Therapist_ID ||
+                       original.Session_Type  !== form.Session_Type;
+  const bookingId    = form.Booking_ID;
+  const th           = (therapists || []).find((t) => t.Therapist_ID === form.Therapist_ID);
+  const therapistName = th?.Name_EN || original.Therapist_Name || '';
+
+  function txnPayload(fee) {
+    return {
+      date:           form.Session_Date,
+      description:    `Session — ${form.Client_Name} with ${therapistName}`,
+      category:       'Revenue',
+      cashIn:         fee,
+      method:         form.Payment_Method,
+      bookingId,
+      idempotencyKey: `txn-paid-${bookingId}`,
+    };
+  }
+
+  if (wasPaid && !isPaid) {
+    // Admin un-marked payment → remove Cash In from Cash Flow
+    await deleteTransactionByBookingId(bookingId);
+  } else if (wasPaid && isPaid && feeChanged) {
+    // Fee likely changed → delete old entry and recreate with recalculated fee.
+    // After deletion the idempotency key is gone from the sheet, so the same
+    // key can be reused safely for the new row.
+    const fee = resolveFee(therapists, form.Therapist_ID, form.Session_Type, original.Fee);
+    await deleteTransactionByBookingId(bookingId);
+    await addTransaction(txnPayload(fee));
+  } else if (!wasPaid && isPaid) {
+    // Admin marked as Paid via edit modal (not the "Mark Paid" action button)
+    const fee = resolveFee(therapists, form.Therapist_ID, form.Session_Type, original.Fee);
+    await addTransaction(txnPayload(fee));
+  }
+}
+
 function initForm(booking, isNew) {
   if (isNew) {
     return {
@@ -165,8 +212,13 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
     setSaving(true);
     setSaveError('');
     const res = isNew ? await addBookingAdmin(form) : await editBooking(form);
+
+    if (res.success && !isNew && booking) {
+      await syncCashFlowTransaction(booking, form, therapists);
+    }
+
     setSaving(false);
-    if (res.success) { onSuccess(); onClose(); }
+    if (res.success) { toast(isNew ? 'Session added' : 'Session updated'); onSuccess(); onClose(); }
     else setSaveError(res.error || 'Failed to save. Please try again.');
   }
 

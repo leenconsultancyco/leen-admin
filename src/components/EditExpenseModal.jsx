@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner } from '@heroui/react';
 import { editExpense, getExpenseCategories } from '../api';
+import { toast } from './Toast';
 import { useI18n } from '../i18n';
 
 const METHODS = ['Cash', 'Bank transfer'];
@@ -74,7 +75,7 @@ export default function EditExpenseModal({ expense, isOpen, onClose, onSuccess }
       notes:       form.notes,
     });
     setSaving(false);
-    if (result.success) { onSuccess(); onClose(); }
+    if (result.success) { toast('Expense updated'); onSuccess(); onClose(); }
     else setError(result.error || t('general.error'));
   }
 

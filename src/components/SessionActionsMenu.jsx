@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button, Spinner } from '@heroui/react';
 import { confirmBooking, cancelBooking, markPaid, addTransaction } from '../api';
+import { toast } from './Toast';
 import { getIsOnline } from '../hooks/useOnlineStatus';
 import { useI18n } from '../i18n';
 import ConfirmModal from './ConfirmModal';
@@ -80,12 +81,13 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
     return () => document.removeEventListener('mousedown', handleOutside, true);
   }, [open]);
 
-  async function run(fn) {
+  async function run(fn, message = 'Done') {
     setBusy(true);
     setOpen(false);
     setStep('menu');
     await fn();
     setBusy(false);
+    toast(message);
     onDone();
   }
 
@@ -125,7 +127,7 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
               <>
                 {isPending && (
                   <MenuItem variant="success" disabled={!online}
-                    onClick={() => run(() => confirmBooking(booking.Booking_ID))}>
+                    onClick={() => run(() => confirmBooking(booking.Booking_ID), 'Session confirmed')}>
                     ✅ {t('dashboard.confirm')}
                   </MenuItem>
                 )}
@@ -189,7 +191,7 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
                         bookingId: booking.Booking_ID,
                         idempotencyKey: `txn-paid-${booking.Booking_ID}`,
                       });
-                    })}
+                    }, 'Payment recorded')}
                     style={{ flex: 1, padding: '6px', fontSize: '12px', fontWeight: '600',
                       borderRadius: '6px', border: 'none', background: '#0E9B73',
                       color: '#fff', cursor: 'pointer' }}>
@@ -205,7 +207,7 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
       <ConfirmModal
         isOpen={cancelOpen}
         onClose={() => setCancelOpen(false)}
-        onConfirm={() => run(() => cancelBooking(booking.Booking_ID, ''))}
+        onConfirm={() => run(() => cancelBooking(booking.Booking_ID, ''), 'Session cancelled')}
         title={t('sessions.cancel')}
         message={`${t('sessions.cancel')} — ${booking.Client_Name}?`}
       />

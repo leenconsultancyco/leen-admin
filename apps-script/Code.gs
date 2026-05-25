@@ -154,6 +154,7 @@ function doPost(e) {
       case 'blockDate':       return ok(blockDate_(body));
       case 'editBooking':     return ok(editBooking_(body));
       case 'deleteBooking':   return ok(deleteBooking_(body.bookingId));
+      case 'deleteTransactionByBookingId': return ok(deleteTransactionByBookingId_(body.bookingId));
       case 'addBookingAdmin': return ok(addBookingAdmin_(body));
       case 'markPayoutPaid':  return ok(markPayoutPaid_(body));
       case 'updatePassword':  return ok(updatePassword_(body.newHash));
@@ -701,6 +702,29 @@ function deleteBooking_(bookingId) {
     }
   }
   throw new Error('Booking not found');
+}
+
+// ---------------------------------------------------------------------------
+// POST — Delete Transaction by Booking ID
+// Removes the Cash Flow entry auto-created when a session was marked paid.
+// Scans bottom-up so row deletions don't shift unvisited indices.
+// ---------------------------------------------------------------------------
+
+function deleteTransactionByBookingId_(bookingId) {
+  const sheet = getSheet('Transactions');
+  if (!sheet || !bookingId) return { deleted: false };
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const bidCol  = headers.indexOf('Booking_ID');
+  if (bidCol === -1) return { deleted: false };
+  let deleted = false;
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][bidCol] === bookingId) {
+      sheet.deleteRow(i + 1);
+      deleted = true;
+    }
+  }
+  return { deleted };
 }
 
 // ---------------------------------------------------------------------------

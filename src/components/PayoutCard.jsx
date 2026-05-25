@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Card, Button, Chip, Separator } from '@heroui/react';
+import { useState, useMemo } from 'react';
+import { Card, Button, Chip, Separator, Spinner } from '@heroui/react';
 import { markPayoutPaid } from '../api';
+import { toast } from './Toast';
 import { useI18n } from '../i18n';
 import ConfirmModal from './ConfirmModal';
 
@@ -19,14 +20,41 @@ export default function PayoutCard({ payout, month, year, onDone }) {
   const { t } = useI18n();
   const [expanded, setExpanded]     = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
+  const [payingIdx, setPayingIdx]   = useState(null);
   const [saving, setSaving]         = useState(false);
 
-  const pending = Number(payout.pending || 0);
+  const pending   = Number(payout.pending   || 0);
+  const totalPaid = Number(payout.totalPaid || 0);
 
-  async function handleSettle() {
+  // Sort oldest-first so cumulative settlement is FIFO-consistent
+  const sortedSessions = useMemo(() =>
+    [...(payout.sessions || [])].sort((a, b) =>
+      String(a.Session_Date).localeCompare(String(b.Session_Date))
+    ),
+  [payout.sessions]);
+
+  // Sessions where running cumulative ≤ totalPaid are already settled
+  const sessionStates = useMemo(() => {
+    let cum = 0;
+    return sortedSessions.map((s) => {
+      cum += Number(s.Revenue_Therapist || 0);
+      return { session: s, settled: cum <= totalPaid };
+    });
+  }, [sortedSessions, totalPaid]);
+
+  async function handlePaySession(session, idx) {
+    setPayingIdx(idx);
+    await markPayoutPaid(payout.therapistId, month, year, Number(session.Revenue_Therapist || 0));
+    setPayingIdx(null);
+    toast('Payout recorded');
+    onDone();
+  }
+
+  async function handleSettleAll() {
     setSaving(true);
     await markPayoutPaid(payout.therapistId, month, year, pending);
     setSaving(false);
+    toast('Payout settled');
     onDone();
   }
 
@@ -50,7 +78,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
             </div>
             <div className="bg-default-50 rounded-lg px-2 py-1.5">
               <p className="text-default-400">{t('payouts.totalPaid')}</p>
-              <p dir="ltr" className="font-semibold text-success">{fmt(payout.totalPaid)}</p>
+              <p dir="ltr" className="font-semibold text-success">{fmt(totalPaid)}</p>
             </div>
             <div className={`rounded-lg px-2 py-1.5 ${pending > 0 ? 'bg-warning-50' : 'bg-default-50'}`}>
               <p className="text-default-400">{t('payouts.pending')}</p>
@@ -70,14 +98,41 @@ export default function PayoutCard({ payout, month, year, onDone }) {
             )}
           </div>
 
-          {expanded && (payout.sessions?.length ?? 0) > 0 && (
+          {expanded && sortedSessions.length > 0 && (
             <>
               <Separator />
-              <ul className="flex flex-col gap-1">
-                {payout.sessions.map((s, i) => (
-                  <li key={i} className="flex justify-between text-xs text-default-600 py-0.5">
-                    <span>{s.Session_Date} · {s.Session_Type}</span>
-                    <span dir="ltr" className="text-primary font-medium">{fmt(s.Revenue_Therapist)}</span>
+              <ul className="flex flex-col gap-1.5">
+                {sessionStates.map(({ session: s, settled }, i) => (
+                  <li key={i} className="flex justify-between items-center text-xs py-0.5">
+                    <span className="text-default-600">
+                      {s.Session_Date} · {s.Session_Type}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span dir="ltr" className={`font-medium ${settled ? 'text-success' : 'text-primary'}`}>
+                        {fmt(s.Revenue_Therapist)}
+                      </span>
+                      {settled ? (
+                        <span className="text-success font-bold text-xs w-10 text-center">✓ Paid</span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={payingIdx !== null}
+                          onClick={() => handlePaySession(s, i)}
+                          style={{
+                            width: '40px', fontSize: '11px', padding: '3px 0',
+                            borderRadius: '5px', border: 'none',
+                            background: payingIdx === i ? '#f59e0b' : '#d97706',
+                            color: '#fff', cursor: payingIdx !== null ? 'not-allowed' : 'pointer',
+                            opacity: payingIdx !== null && payingIdx !== i ? 0.5 : 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          {payingIdx === i
+                            ? <Spinner size="sm" color="white" />
+                            : 'Pay'}
+                        </button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -89,7 +144,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
       <ConfirmModal
         isOpen={settleOpen}
         onClose={() => setSettleOpen(false)}
-        onConfirm={handleSettle}
+        onConfirm={handleSettleAll}
         title={t('payouts.settlePayout')}
         message={`${t('payouts.settlePayout')}: ${payout.therapistName} — ${fmt(pending)}`}
         confirmColor="warning"

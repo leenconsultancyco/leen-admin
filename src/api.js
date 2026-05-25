@@ -190,6 +190,10 @@ export async function deleteBooking(bookingId) {
   return post('deleteBooking', { bookingId });
 }
 
+export async function deleteTransactionByBookingId(bookingId) {
+  return post('deleteTransactionByBookingId', { bookingId });
+}
+
 export async function addBookingAdmin(bookingData) {
   return post('addBookingAdmin', bookingData);
 }
