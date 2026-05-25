@@ -154,6 +154,7 @@ export default function Sessions() {
         onClose={() => setAdding(false)}
         onSuccess={() => { setAdding(false); load(); }}
         therapists={therapists}
+        sessions={sessions}
       />
 
       {editingSession && (
@@ -164,6 +165,7 @@ export default function Sessions() {
           onClose={() => setEditing(null)}
           onSuccess={() => { setEditing(null); load(); }}
           therapists={therapists}
+          sessions={sessions}
         />
       )}
 

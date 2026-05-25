@@ -1,30 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner, Tabs } from '@heroui/react';
-import { addBookingAdmin, editBooking } from '../api';
+import { addBookingAdmin, editBooking, getAvailableSlots } from '../api';
 
-const TYPES      = ['Individual', 'Couples', 'Family', 'Group', 'Workshop'];
-const MODES      = ['In-person', 'Online'];
-const STATUSES   = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
-const PAYMENTS   = ['Unpaid', 'Paid', 'Waived'];
+const TYPES       = ['Individual', 'Couples', 'Family', 'Group', 'Workshop'];
+const MODES       = ['In-person', 'Online'];
+const STATUSES    = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
+const PAYMENTS    = ['Unpaid', 'Paid', 'Waived'];
 const PAY_METHODS = ['Cash', 'Bank transfer'];
-const TODAY      = new Date().toISOString().slice(0, 10);
+const TODAY       = new Date().toISOString().slice(0, 10);
 
-const F = {
+const F   = {
   display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
   borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
   backgroundColor: '#ffffff', color: '#111827', fontSize: '16px',
   marginBottom: '8px', boxSizing: 'border-box',
 };
 const LBL   = { display: 'block', fontSize: '13px', color: '#6b7280', marginBottom: '4px' };
-const PANEL = { minHeight: '340px', maxHeight: '340px', overflowY: 'auto', paddingTop: '12px' };
+const PANEL = { minHeight: '340px', maxHeight: '380px', overflowY: 'auto', paddingTop: '12px' };
 
 function Field({ label, children }) {
-  return (
-    <div>
-      {label && <label style={LBL}>{label}</label>}
-      {children}
-    </div>
-  );
+  return <div>{label && <label style={LBL}>{label}</label>}{children}</div>;
 }
 
 function TypePill({ label, checked, onChange }) {
@@ -41,10 +36,90 @@ function TypePill({ label, checked, onChange }) {
   );
 }
 
+function SlotPicker({ therapistId, date, sessions, bookingId, value, onChange }) {
+  const [slots, setSlots]     = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+
+  const bookedTimes = useMemo(() => {
+    if (!sessions || !therapistId || !date) return new Set();
+    return new Set(
+      sessions
+        .filter((s) =>
+          s.Therapist_ID === therapistId &&
+          String(s.Session_Date).substring(0, 10) === date &&
+          s.Status !== 'Cancelled' &&
+          (!bookingId || s.Booking_ID !== bookingId)
+        )
+        .map((s) => s.Session_Time)
+    );
+  }, [sessions, therapistId, date, bookingId]);
+
+  useEffect(() => {
+    if (!therapistId || !date) { setSlots([]); setError(''); return; }
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    getAvailableSlots(therapistId, date).then((r) => {
+      if (cancelled) return;
+      setLoading(false);
+      if (r.success && Array.isArray(r.data) && r.data.length > 0) {
+        setSlots(r.data);
+      } else {
+        setSlots([]);
+        setError('No slots found — enter time manually');
+      }
+    });
+    return () => { cancelled = true; };
+  }, [therapistId, date]);
+
+  if (!therapistId || !date) return null;
+
+  return (
+    <div style={{ marginBottom: '8px' }}>
+      <p style={LBL}>Available Slots</p>
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#9ca3af', fontSize: '12px', padding: '4px 0 8px' }}>
+          <Spinner size="sm" /> Loading slots…
+        </div>
+      ) : error ? (
+        <p style={{ fontSize: '12px', color: '#9ca3af', margin: '0 0 8px' }}>{error}</p>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+          {slots.map((slot) => {
+            const isBooked   = bookedTimes.has(slot);
+            const isSelected = value === slot;
+            return (
+              <button
+                key={slot}
+                type="button"
+                disabled={isBooked}
+                onClick={() => onChange(slot)}
+                title={isBooked ? 'Already booked' : slot}
+                style={{
+                  padding: '3px 10px', borderRadius: '6px', fontSize: '12px',
+                  border: `1.5px solid ${isSelected ? '#0E9B73' : isBooked ? '#e5e7eb' : '#d1d5db'}`,
+                  backgroundColor: isSelected ? '#0E9B73' : isBooked ? '#f9fafb' : '#fff',
+                  color: isSelected ? '#fff' : isBooked ? '#c4c4c4' : '#374151',
+                  cursor: isBooked ? 'not-allowed' : 'pointer',
+                  textDecoration: isBooked ? 'line-through' : 'none',
+                  transition: 'all 0.12s',
+                }}
+              >
+                {slot}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function initForm(booking, isNew) {
   if (isNew) {
     return {
-      Therapist_ID: '', Session_Date: TODAY, Session_Time: '09:00',
+      Therapist_ID: '', Session_Date: TODAY, Session_Time: '',
       Session_Type: 'Individual', Session_Mode: 'In-person', Video_Link: '',
       Client_Name: '', Client_Phone: '', Client_Email: '',
       Status: 'Confirmed', Payment_Status: 'Unpaid', Payment_Method: 'Cash', Notes: '',
@@ -53,8 +128,8 @@ function initForm(booking, isNew) {
   return {
     Booking_ID:     booking.Booking_ID     || '',
     Therapist_ID:   booking.Therapist_ID   || '',
-    Session_Date:   booking.Session_Date   || TODAY,
-    Session_Time:   booking.Session_Time   || '09:00',
+    Session_Date:   String(booking.Session_Date   || TODAY).substring(0, 10),
+    Session_Time:   booking.Session_Time   || '',
     Session_Type:   booking.Session_Type   || 'Individual',
     Session_Mode:   booking.Session_Mode   || 'In-person',
     Video_Link:     booking.Video_Link     || '',
@@ -68,9 +143,9 @@ function initForm(booking, isNew) {
   };
 }
 
-export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSuccess, therapists }) {
-  const [form, setForm]         = useState(() => initForm(booking, isNew));
-  const [saving, setSaving]     = useState(false);
+export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSuccess, therapists, sessions }) {
+  const [form, setForm]           = useState(() => initForm(booking, isNew));
+  const [saving, setSaving]       = useState(false);
   const [saveError, setSaveError] = useState('');
 
   useEffect(() => { setForm(initForm(booking, isNew)); setSaveError(''); }, [booking, isNew, isOpen]);
@@ -117,22 +192,38 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
                       ))}
                     </select>
                   </Field>
+
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                     <Field label="Date *">
-                      <input type="date" value={form.Session_Date} onChange={(e) => set('Session_Date', e.target.value)} style={F} />
+                      <input type="date" value={form.Session_Date}
+                        onChange={(e) => set('Session_Date', e.target.value)} style={F} />
                     </Field>
                     <Field label="Time">
-                      <input type="time" value={form.Session_Time} onChange={(e) => set('Session_Time', e.target.value)} style={F} />
+                      <input type="time" value={form.Session_Time}
+                        onChange={(e) => set('Session_Time', e.target.value)} style={F}
+                        placeholder="or pick a slot below" />
                     </Field>
                   </div>
+
+                  <SlotPicker
+                    therapistId={form.Therapist_ID}
+                    date={form.Session_Date}
+                    sessions={sessions}
+                    bookingId={form.Booking_ID}
+                    value={form.Session_Time}
+                    onChange={(slot) => set('Session_Time', slot)}
+                  />
+
                   <div style={{ marginBottom: '12px' }}>
                     <p style={LBL}>Session Type</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {TYPES.map((tp) => (
-                        <TypePill key={tp} label={tp} checked={form.Session_Type === tp} onChange={() => set('Session_Type', tp)} />
+                        <TypePill key={tp} label={tp} checked={form.Session_Type === tp}
+                          onChange={() => set('Session_Type', tp)} />
                       ))}
                     </div>
                   </div>
+
                   <Field label="Mode">
                     <select value={form.Session_Mode} onChange={(e) => set('Session_Mode', e.target.value)} style={F}>
                       {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -140,7 +231,8 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
                   </Field>
                   {form.Session_Mode === 'Online' && (
                     <Field label="Video Link">
-                      <input value={form.Video_Link} onChange={(e) => set('Video_Link', e.target.value)} style={F} placeholder="https://..." />
+                      <input value={form.Video_Link} onChange={(e) => set('Video_Link', e.target.value)}
+                        style={F} placeholder="https://…" />
                     </Field>
                   )}
                 </div>
@@ -156,7 +248,8 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
                     <input value={form.Client_Phone} onChange={(e) => set('Client_Phone', e.target.value)} style={F} />
                   </Field>
                   <Field label="Email">
-                    <input type="email" value={form.Client_Email} onChange={(e) => set('Client_Email', e.target.value)} style={F} />
+                    <input type="email" value={form.Client_Email}
+                      onChange={(e) => set('Client_Email', e.target.value)} style={F} />
                   </Field>
                 </div>
               </Tabs.Panel>
@@ -187,6 +280,7 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
               </Tabs.Panel>
             </Tabs>
           </Modal.Body>
+
           <Modal.Footer>
             {saveError && (
               <p style={{ color: '#ef4444', fontSize: '13px', flex: 1, margin: 0 }}>{saveError}</p>

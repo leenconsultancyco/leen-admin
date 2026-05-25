@@ -61,6 +61,14 @@ export async function getDashboardData(month, year) {
 // GET — Sessions
 // ---------------------------------------------------------------------------
 
+export async function getAvailableSlots(therapistId, date) {
+  try {
+    return await get('getAvailableSlots', { therapistId, date });
+  } catch {
+    return errorEnvelope('Failed to load available slots');
+  }
+}
+
 export async function getSessions(filters = {}) {
   const { month, year, therapistId, status } = filters;
   const params = { month, year };
