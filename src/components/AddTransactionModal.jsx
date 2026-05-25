@@ -109,7 +109,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }) {
             <Button color="primary" isDisabled={saving}
               startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
               onPress={handleSave}>
-              {t('general.save')}
+              {saving ? 'Saving…' : t('general.save')}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

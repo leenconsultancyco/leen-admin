@@ -1,6 +1,7 @@
 import { APPS_SCRIPT_URL, ORIGIN } from './config';
 import { getIsOnline } from './hooks/useOnlineStatus';
 import { enqueueRequest } from './offlineQueue';
+import { startSaving, stopSaving } from './components/Toast';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -37,11 +38,14 @@ async function post(action, rawData) {
     return { success: true, queued: true, data: null, error: null };
   }
 
+  startSaving();
   try {
     return await rawPost(action, data);
   } catch {
     enqueueRequest(action, data);
     return { success: true, queued: true, data: null, error: null };
+  } finally {
+    stopSaving();
   }
 }
 

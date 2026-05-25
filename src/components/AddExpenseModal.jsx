@@ -218,7 +218,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess, initialDat
               <Button color="primary" isDisabled={saving}
                 startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
                 onPress={handleSave}>
-                {t('general.save')}
+                {saving ? 'Saving…' : t('general.save')}
               </Button>
             </Modal.Footer>
           )}

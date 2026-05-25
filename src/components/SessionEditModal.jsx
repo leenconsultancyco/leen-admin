@@ -349,7 +349,7 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
             <Button color="primary" isDisabled={saving || !canSave}
               startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
               onPress={handleSave}>
-              {isNew ? 'Add Session' : 'Save Changes'}
+              {saving ? 'Saving…' : isNew ? 'Add Session' : 'Save Changes'}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>
