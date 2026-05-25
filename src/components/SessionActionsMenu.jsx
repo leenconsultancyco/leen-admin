@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button, Spinner } from '@heroui/react';
-import { confirmBooking, cancelBooking, markPaid } from '../api';
+import { confirmBooking, cancelBooking, markPaid, addTransaction } from '../api';
 import { getIsOnline } from '../hooks/useOnlineStatus';
 import { useI18n } from '../i18n';
 import ConfirmModal from './ConfirmModal';
@@ -178,7 +178,17 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
                     {t('general.cancel')}
                   </button>
                   <button type="button" disabled={!online}
-                    onClick={() => run(() => markPaid(booking.Booking_ID, payMethod))}
+                    onClick={() => run(async () => {
+                      await markPaid(booking.Booking_ID, payMethod);
+                      await addTransaction({
+                        date: booking.Session_Date,
+                        description: `Session — ${booking.Client_Name} with ${booking.Therapist_Name}`,
+                        category: 'Revenue',
+                        cashIn: Number(booking.Fee),
+                        method: payMethod,
+                        bookingId: booking.Booking_ID,
+                      });
+                    })}
                     style={{ flex: 1, padding: '6px', fontSize: '12px', fontWeight: '600',
                       borderRadius: '6px', border: 'none', background: '#0E9B73',
                       color: '#fff', cursor: 'pointer' }}>

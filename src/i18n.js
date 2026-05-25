@@ -67,6 +67,7 @@ export const translations = {
     cashflow: {
       title:        'Cash Flow',
       addTransaction:'Add Transaction',
+      addManualEntry:'+ Manual Entry',
       transactionLog:'Transaction Log',
       description:  'Description',
       category:     'Category',
@@ -307,6 +308,7 @@ export const translations = {
     cashflow: {
       title:         'التدفق النقدي',
       addTransaction:'إضافة معاملة',
+      addManualEntry:'+ إدخال يدوي',
       transactionLog:'سجل المعاملات',
       description:   'الوصف',
       category:      'الفئة',

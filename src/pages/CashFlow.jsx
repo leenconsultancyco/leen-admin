@@ -73,7 +73,7 @@ export default function CashFlow() {
           options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
         <FilterSelect value={year} onChange={setYear} label=""
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
-        <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>+ {t('cashflow.addTransaction')}</Button>
+        <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>{t('cashflow.addManualEntry')}</Button>
         <Button size="sm" variant="flat" onPress={() => buildTransactionsExcel(rows, month, year)}>{t('cashflow.export')}</Button>
       </div>
 
