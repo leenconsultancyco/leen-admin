@@ -2,6 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button, Modal, Spinner, Tabs } from '@heroui/react';
 import { addBookingAdmin, editBooking, getAvailableSlots } from '../api';
 
+function to12h(t) {
+  if (!t) return t;
+  const [h, m] = String(t).split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return t;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 const TYPES       = ['Individual', 'Couples', 'Family', 'Group', 'Workshop'];
 const MODES       = ['In-person', 'Online'];
 const STATUSES    = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
@@ -95,7 +103,7 @@ function SlotPicker({ therapistId, date, sessions, bookingId, value, onChange })
                 type="button"
                 disabled={isBooked}
                 onClick={() => onChange(slot)}
-                title={isBooked ? 'Already booked' : slot}
+                title={isBooked ? 'Already booked' : to12h(slot)}
                 style={{
                   padding: '3px 10px', borderRadius: '6px', fontSize: '12px',
                   border: `1.5px solid ${isSelected ? '#0E9B73' : isBooked ? '#e5e7eb' : '#d1d5db'}`,
@@ -106,7 +114,7 @@ function SlotPicker({ therapistId, date, sessions, bookingId, value, onChange })
                   transition: 'all 0.12s',
                 }}
               >
-                {slot}
+                {to12h(slot)}
               </button>
             );
           })}

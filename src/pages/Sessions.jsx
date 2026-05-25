@@ -13,6 +13,14 @@ const STATUSES = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
 const PAYMENTS = ['Unpaid', 'Paid'];
 const NOW      = new Date();
 
+function to12h(t) {
+  if (!t || String(t).includes('1899')) return '—';
+  const [h, m] = String(t).split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return '—';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 function statusColor(s) {
   return { Confirmed: 'success', Pending: 'warning', Cancelled: 'danger', Completed: 'primary', 'No-show': 'default' }[s] || 'default';
 }
@@ -88,7 +96,7 @@ export default function Sessions() {
     { key: 'Therapist_Name',    label: t('sessions.therapist'),     sortable: true },
     { key: 'Session_Date',      label: t('sessions.date'),          sortable: true },
     { key: 'Session_Time',      label: t('sessions.time'),
-      render: (r) => <span>{String(r.Session_Time || '').includes('1899') ? '—' : r.Session_Time || '—'}</span> },
+      render: (r) => <span>{to12h(r.Session_Time)}</span> },
     { key: 'Session_Type',      label: t('sessions.type') },
     { key: 'Session_Mode',      label: t('sessions.mode') },
     { key: 'Fee',               label: t('sessions.fee'),           render: (r) => <span dir="ltr">{fmt(r.Fee)}</span> },
