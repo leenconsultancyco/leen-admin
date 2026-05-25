@@ -25,7 +25,11 @@ function sheetToObjects(sheet) {
     headers.forEach((h, i) => {
       let val = row[i];
       if (val instanceof Date) {
-        val = Utilities.formatDate(val, TZ, 'yyyy-MM-dd');
+        // Google Sheets stores time-only values with the 1899-12-30 epoch date.
+        // Detect by year and format as HH:mm instead of a date string.
+        val = val.getFullYear() === 1899
+          ? Utilities.formatDate(val, TZ, 'HH:mm')
+          : Utilities.formatDate(val, TZ, 'yyyy-MM-dd');
       }
       obj[h] = val;
     });
