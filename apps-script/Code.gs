@@ -550,9 +550,25 @@ function deleteExpense_(body) {
   const data    = sheet.getDataRange().getValues();
   const headers = data[0];
   const idCol   = headers.indexOf('Expense_ID');
+  const iKeyCol = headers.indexOf('Idempotency_Key');
   for (let i = 1; i < data.length; i++) {
     if (data[i][idCol] === body.expenseId) {
+      const expenseIKey = iKeyCol >= 0 ? data[i][iKeyCol] : null;
       sheet.deleteRow(i + 1);
+      // Also delete the linked transaction created when this expense was added
+      if (expenseIKey) {
+        const txnSheet  = getSheet('Transactions');
+        const txnData   = txnSheet.getDataRange().getValues();
+        const txnHeaders = txnData[0];
+        const txnIKeyCol = txnHeaders.indexOf('Idempotency_Key');
+        const linkedKey  = 'txn-exp-' + expenseIKey;
+        for (let j = txnData.length - 1; j >= 1; j--) {
+          if (txnData[j][txnIKeyCol] === linkedKey) {
+            txnSheet.deleteRow(j + 1);
+            break;
+          }
+        }
+      }
       return { deleted: true };
     }
   }
