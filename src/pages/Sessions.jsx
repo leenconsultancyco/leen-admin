@@ -9,6 +9,7 @@ import SessionActionsMenu from '../components/SessionActionsMenu';
 import SessionEditModal from '../components/SessionEditModal';
 import ConfirmModal from '../components/ConfirmModal';
 import OfflineBanner from '../components/OfflineBanner';
+import SessionCalendarView from '../components/SessionCalendarView';
 
 const STATUSES = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
 const PAYMENTS = ['Unpaid', 'Paid'];
@@ -56,6 +57,7 @@ export default function Sessions() {
   const [editingSession, setEditing]  = useState(null);
   const [deletingSession, setDeleting]= useState(null);
   const [deleting, setDelBusy]        = useState(false);
+  const [view, setView]               = useState('table');
 
   const years  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -94,6 +96,12 @@ export default function Sessions() {
     setDelBusy(false);
     setDeleting(null);
     load();
+  }
+
+  function handleCalendarBookingSuccess() {
+    toast(t('sessions.bookingSuccess'));
+    load();
+    setTimeout(() => setView('table'), 1500);
   }
 
   const columns = [
@@ -153,6 +161,32 @@ export default function Sessions() {
         <Button size="sm" color="primary" onPress={() => setAdding(true)}>
           + {t('sessions.addSession') || 'Add Session'}
         </Button>
+        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+          <button
+            onClick={() => setView('table')}
+            style={{
+              padding: '5px 12px', borderRadius: '7px', fontSize: '12px', cursor: 'pointer',
+              border: `1.5px solid ${view === 'table' ? '#0E9B73' : '#d1d5db'}`,
+              backgroundColor: view === 'table' ? '#0E9B73' : '#fff',
+              color: view === 'table' ? '#fff' : '#6b7280',
+              fontWeight: view === 'table' ? 600 : 400,
+            }}
+          >
+            ≡ {t('sessions.tableView')}
+          </button>
+          <button
+            onClick={() => setView('calendar')}
+            style={{
+              padding: '5px 12px', borderRadius: '7px', fontSize: '12px', cursor: 'pointer',
+              border: `1.5px solid ${view === 'calendar' ? '#0E9B73' : '#d1d5db'}`,
+              backgroundColor: view === 'calendar' ? '#0E9B73' : '#fff',
+              color: view === 'calendar' ? '#fff' : '#6b7280',
+              fontWeight: view === 'calendar' ? 600 : 400,
+            }}
+          >
+            ⊞ {t('sessions.calendarView')}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
@@ -169,7 +203,19 @@ export default function Sessions() {
         ))}
       </div>
 
-      <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
+      {view === 'table' ? (
+        <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
+      ) : (
+        <SessionCalendarView
+          key={`cal-${month}-${year}-${therapistId}`}
+          sessions={sessions}
+          therapistId={therapistId}
+          therapists={therapists}
+          month={Number(month)}
+          year={Number(year)}
+          onBookingSuccess={handleCalendarBookingSuccess}
+        />
+      )}
 
       <SessionEditModal
         isNew={true}

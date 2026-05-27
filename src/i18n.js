@@ -62,6 +62,10 @@ export const translations = {
       paymentMethod:    'Payment Method',
       cash:             'Cash',
       bankTransfer:     'Bank Transfer',
+      calendarView:     'Calendar',
+      tableView:        'Table',
+      selectTherapistFirst: 'Select a specific therapist to see available slots',
+      bookingSuccess:   'Session booked — switching to table view',
     },
 
     cashflow: {
@@ -303,6 +307,10 @@ export const translations = {
       paymentMethod:    'طريقة الدفع',
       cash:             'نقداً',
       bankTransfer:     'تحويل بنكي',
+      calendarView:     'تقويم',
+      tableView:        'جدول',
+      selectTherapistFirst: 'اختر معالجاً محدداً لعرض الأوقات المتاحة',
+      bookingSuccess:   'تم الحجز — الانتقال إلى طريقة عرض الجدول',
     },
 
     cashflow: {
