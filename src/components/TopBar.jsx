@@ -6,11 +6,12 @@ export default function TopBar({ title, pendingCount = 0 }) {
   const { lang } = useI18n();
 
   return (
-    <header className="md:hidden fixed top-0 inset-x-0 z-20 bg-primary-50 border-b border-primary-100 h-14 flex items-center px-4 gap-3">
-      <span className="text-lg font-bold text-primary shrink-0">ليـن</span>
+    <header className="md:hidden fixed top-0 inset-x-0 z-20 border-b h-14 flex items-center px-4 gap-3" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--header-border)' }}>
+      <span className="text-lg font-bold shrink-0" style={{ color: 'var(--header-text)' }}>ليـن</span>
 
       <h1
-        className="flex-1 text-center text-sm font-semibold text-default-700 truncate"
+        className="flex-1 text-center text-sm font-semibold truncate"
+        style={{ color: 'var(--header-text)' }}
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
       >
         {title}
