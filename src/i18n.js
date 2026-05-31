@@ -31,8 +31,13 @@ export const translations = {
       cancel:         'Cancel',
       lastBackup:     'Last backup',
       backupWarning:  'No backup in the last 7 days — please back up soon.',
-      noPending:      'No pending bookings',
-      noActivity:     'No recent activity',
+      noPending:             'No pending bookings',
+      noActivity:            'No recent activity',
+      awaitingAction:        'Awaiting your action',
+      pendingConfirmations:  'Pending confirmations',
+      viewAllSessions:       'View all sessions',
+      revenueVsExpenses:     'Revenue vs expenses · last 6 months',
+      revenue:               'Revenue',
     },
 
     sessions: {
@@ -232,6 +237,7 @@ export const translations = {
       success:      'Done',
       close:        'Close',
       more:         'More',
+      today:        'Today',
     },
 
     connection: {
@@ -276,8 +282,13 @@ export const translations = {
       cancel:         'إلغاء',
       lastBackup:     'آخر نسخة احتياطية',
       backupWarning:  'لم يتم النسخ الاحتياطي منذ 7 أيام — يرجى النسخ قريباً.',
-      noPending:      'لا توجد حجوزات معلقة',
-      noActivity:     'لا توجد نشاطات حديثة',
+      noPending:             'لا توجد حجوزات معلقة',
+      noActivity:            'لا توجد نشاطات حديثة',
+      awaitingAction:        'في انتظار إجراءك',
+      pendingConfirmations:  'تأكيدات معلقة',
+      viewAllSessions:       'عرض كل الجلسات',
+      revenueVsExpenses:     'الإيرادات مقابل المصاريف · آخر 6 أشهر',
+      revenue:               'الإيرادات',
     },
 
     sessions: {
@@ -477,6 +488,7 @@ export const translations = {
       success:      'تم',
       close:        'إغلاق',
       more:         'المزيد',
+      today:        'اليوم',
     },
 
     connection: {
