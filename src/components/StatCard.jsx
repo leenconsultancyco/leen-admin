@@ -15,10 +15,10 @@ export default function StatCard({ icon: Icon, value, label, sublabel, color = '
       isPressable={!!onClick}
       onPress={onClick}
     >
-      <Card.Content className="flex flex-row items-center gap-3 p-3 md:p-4">
+      <Card.Content className="flex flex-row items-center gap-3.5 p-[18px]">
         {Icon && (
-          <div className={`rounded-xl p-2.5 shrink-0 ${ICON_BG[color] || ICON_BG.default}`}>
-            <Icon size={18} strokeWidth={1.6} />
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${ICON_BG[color] || ICON_BG.default}`}>
+            <Icon size={20} strokeWidth={1.6} />
           </div>
         )}
         <div className="min-w-0 flex-1">

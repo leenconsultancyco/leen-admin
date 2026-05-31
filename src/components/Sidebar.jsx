@@ -31,7 +31,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden md:flex flex-col fixed inset-y-0 start-0 w-[220px] z-20"
+      className="hidden md:flex flex-col fixed inset-y-0 start-0 w-[240px] z-20"
       style={{ backgroundColor: SIDEBAR_BG }}
     >
       {/* Logo */}

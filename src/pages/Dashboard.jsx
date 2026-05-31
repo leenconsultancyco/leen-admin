@@ -65,7 +65,7 @@ export default function Dashboard() {
       <OfflineBanner />
 
       {/* ── Top 4 stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-[18px]">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
         ) : (
@@ -102,7 +102,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Summary row: expenses + profit ── */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-[18px]">
         {loading ? (
           Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
         ) : (
@@ -126,7 +126,7 @@ export default function Dashboard() {
       {/* ── Pending confirmations ── */}
       {pending.length > 0 && (
         <Card className="leen-card">
-          <Card.Content className="p-4 md:p-5 flex flex-col gap-3">
+          <Card.Content className="p-[22px] flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-semibold text-default-800">
@@ -153,16 +153,16 @@ export default function Dashboard() {
       )}
 
       {/* ── Chart + Recent activity side by side ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-[18px] md:grid-cols-[1.4fr_1fr]">
         <Card className="leen-card">
-          <Card.Content className="p-4 md:p-5 flex flex-col gap-3">
+          <Card.Content className="p-[22px] flex flex-col gap-3">
             <h2 className="text-base font-semibold text-default-800">{t('dashboard.revenueVsExpenses')}</h2>
             <RevenueChart data={Array.isArray(d.monthlyChart) ? d.monthlyChart : []} loading={loading} />
           </Card.Content>
         </Card>
 
         <Card className="leen-card">
-          <Card.Content className="p-4 md:p-5 flex flex-col gap-3">
+          <Card.Content className="p-[22px] flex flex-col gap-3">
             <h2 className="text-base font-semibold text-default-800">{t('dashboard.recentActivity')}</h2>
             {loading ? (
               <div className="flex flex-col gap-2">
@@ -187,16 +187,25 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* ── Backup warning — bottom sticky card ── */}
+      {/* ── Backup warning ── */}
       {!loading && stale && (
-        <div className="flex items-center gap-3 bg-warning-50 border border-warning-200 rounded-xl px-4 py-3">
-          <ShieldAlert size={20} className="text-warning-600 shrink-0" strokeWidth={1.8} />
-          <p className="flex-1 text-sm text-warning-700">
+        <div
+          className="flex items-center gap-3 rounded-xl w-full"
+          style={{ padding: '16px', backgroundColor: '#FDF1DC', border: '1px solid #F2D8A4' }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: '#F2D8A4' }}
+          >
+            <ShieldAlert size={18} strokeWidth={1.8} style={{ color: '#8a560c' }} />
+          </div>
+          <p className="flex-1 text-sm text-default-700">
             {t('dashboard.backupWarning')}
           </p>
           <Link
             to="/settings"
-            className="shrink-0 text-sm font-medium bg-white border border-warning-200 text-warning-700 px-4 py-1.5 rounded-lg hover:bg-warning-50 transition-colors"
+            className="shrink-0 text-sm font-medium bg-white rounded-lg px-4 py-1.5 transition-colors hover:bg-default-50"
+            style={{ border: '1px solid #F2D8A4', color: '#8a560c' }}
           >
             {t('dashboard.openSettings')}
           </Link>
