@@ -1,7 +1,7 @@
 import { Skeleton } from '@heroui/react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, defs, linearGradient, stop,
 } from 'recharts';
 import { useI18n } from '../i18n';
 
@@ -31,9 +31,19 @@ export default function RevenueChart({ data = [], loading = false }) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
+    <ResponsiveContainer width="100%" height={240}>
+      <AreaChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+        <defs>
+          <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="var(--color-primary, #0E9B73)" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="var(--color-primary, #0E9B73)" stopOpacity={0.02} />
+          </linearGradient>
+          <linearGradient id="gradExpenses" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#f31260" stopOpacity={0.20} />
+            <stop offset="95%" stopColor="#f31260" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" vertical={false} />
         <XAxis
           dataKey="month"
           tick={{ fontSize: 12, fill: '#71717a' }}
@@ -45,7 +55,7 @@ export default function RevenueChart({ data = [], loading = false }) {
           tick={{ fontSize: 12, fill: '#71717a' }}
           axisLine={false}
           tickLine={false}
-          width={40}
+          width={36}
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend
@@ -54,23 +64,26 @@ export default function RevenueChart({ data = [], loading = false }) {
           }
           wrapperStyle={{ fontSize: 13 }}
         />
-        <Line
+        <Area
           type="monotone"
           dataKey="revenue"
           stroke="var(--color-primary, #0E9B73)"
           strokeWidth={2.5}
-          dot={{ r: 3, fill: 'var(--color-primary, #0E9B73)' }}
+          fill="url(#gradRevenue)"
+          dot={{ r: 3, fill: 'var(--color-primary, #0E9B73)', strokeWidth: 0 }}
           activeDot={{ r: 5 }}
         />
-        <Line
+        <Area
           type="monotone"
           dataKey="expenses"
           stroke="#f31260"
-          strokeWidth={2.5}
-          dot={{ r: 3, fill: '#f31260' }}
+          strokeWidth={2}
+          strokeDasharray="5 4"
+          fill="url(#gradExpenses)"
+          dot={{ r: 3, fill: '#f31260', strokeWidth: 0 }}
           activeDot={{ r: 5 }}
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

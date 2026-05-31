@@ -15,15 +15,15 @@ export default function StatCard({ icon: Icon, value, label, sublabel, color = '
       isPressable={!!onClick}
       onPress={onClick}
     >
-      <Card.Content className="flex items-center gap-4 p-4 md:p-5">
+      <Card.Content className="flex flex-row items-center gap-3 p-3 md:p-4">
         {Icon && (
-          <div className={`rounded-2xl p-3 shrink-0 ${ICON_BG[color] || ICON_BG.default}`}>
-            <Icon size={22} strokeWidth={1.5} />
+          <div className={`rounded-xl p-2.5 shrink-0 ${ICON_BG[color] || ICON_BG.default}`}>
+            <Icon size={18} strokeWidth={1.6} />
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-xl md:text-2xl font-bold text-default-800 leading-tight truncate">{value}</p>
-          <p className="text-sm text-default-500 mt-0.5 truncate">{label}</p>
+          <p className="text-lg md:text-xl font-bold text-default-800 leading-tight truncate">{value}</p>
+          <p className="text-xs text-default-500 mt-0.5 truncate">{label}</p>
           {trend ? (
             <p className={`text-xs font-semibold mt-0.5 ${trend.direction === 'up' ? 'text-success' : 'text-danger'}`}>
               {trend.direction === 'up' ? '▲' : '▼'} {Math.abs(trend.value)}%

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Skeleton, Chip } from '@heroui/react';
 import { CalendarDays, Banknote, TrendingUp, Bell, Receipt, Wallet,
-         CheckCircle, ArrowLeftRight, CreditCard, Tag, UserRound, Clock } from 'lucide-react';
+         CheckCircle, ArrowLeftRight, CreditCard, Tag, UserRound, Clock, ShieldAlert } from 'lucide-react';
 import { getDashboardData } from '../api';
 import { useI18n } from '../i18n';
 import StatCard from '../components/StatCard';
@@ -63,13 +63,6 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-5">
       <OfflineBanner />
-
-      {!loading && stale && (
-        <div className="bg-warning-50 border border-warning-200 rounded-xl px-4 py-3 text-sm text-warning-700 flex items-center justify-between gap-3">
-          <span>⚠️ {t('dashboard.backupWarning')}</span>
-          <Link to="/settings" className="underline shrink-0 font-medium">{t('nav.settings')}</Link>
-        </div>
-      )}
 
       {/* ── Top 4 stat cards ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -193,6 +186,22 @@ export default function Dashboard() {
           </Card.Content>
         </Card>
       </div>
+
+      {/* ── Backup warning — bottom sticky card ── */}
+      {!loading && stale && (
+        <div className="flex items-center gap-3 bg-warning-50 border border-warning-200 rounded-xl px-4 py-3">
+          <ShieldAlert size={20} className="text-warning-600 shrink-0" strokeWidth={1.8} />
+          <p className="flex-1 text-sm text-warning-700">
+            {t('dashboard.backupWarning')}
+          </p>
+          <Link
+            to="/settings"
+            className="shrink-0 text-sm font-medium bg-white border border-warning-200 text-warning-700 px-4 py-1.5 rounded-lg hover:bg-warning-50 transition-colors"
+          >
+            {t('dashboard.openSettings')}
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

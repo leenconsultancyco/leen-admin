@@ -38,6 +38,7 @@ export const translations = {
       viewAllSessions:       'View all sessions',
       revenueVsExpenses:     'Revenue vs expenses · last 6 months',
       revenue:               'Revenue',
+      openSettings:          'Open settings',
     },
 
     sessions: {
@@ -289,6 +290,7 @@ export const translations = {
       viewAllSessions:       'عرض كل الجلسات',
       revenueVsExpenses:     'الإيرادات مقابل المصاريف · آخر 6 أشهر',
       revenue:               'الإيرادات',
+      openSettings:          'فتح الإعدادات',
     },
 
     sessions: {
