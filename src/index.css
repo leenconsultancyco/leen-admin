@@ -50,57 +50,16 @@ html, body, * {
   opacity: 0.9;
 }
 
-/* Default (teal) */
-:root {
-  --sidebar-bg:   #1a3d35;
-  --header-bg:    #E8F7F2;
-  --header-text:  #374151;
-  --header-border:#C5EBE0;
-}
+/* Default sidebar background (teal theme) */
+:root { --sidebar-bg: oklch(0.26 0.12 162); }
 
-/* 6 theme overrides */
-[data-theme="teal"] {
-  --color-primary: oklch(0.62 0.15 162);
-  --sidebar-bg:    #1a3d35;
-  --header-bg:     #E8F7F2;
-  --header-text:   #374151;
-  --header-border: #C5EBE0;
-}
-[data-theme="navy"] {
-  --color-primary: oklch(0.35 0.15 264);
-  --sidebar-bg:    #111a40;
-  --header-bg:     #E8EAF6;
-  --header-text:   #374151;
-  --header-border: #C5CBE9;
-}
-[data-theme="blue"] {
-  --color-primary: oklch(0.55 0.20 240);
-  --sidebar-bg:    #132040;
-  --header-bg:     #132040;
-  --header-text:   #ffffff;
-  --header-border: #1e3060;
-}
-[data-theme="green"] {
-  --color-primary: oklch(0.45 0.15 145);
-  --sidebar-bg:    #40916C;
-  --header-bg:     #40916C;
-  --header-text:   #ffffff;
-  --header-border: #2d6a4f;
-}
-[data-theme="red"] {
-  --color-primary: oklch(0.50 0.22 25);
-  --sidebar-bg:    #e5383b;
-  --header-bg:     #e5383b;
-  --header-text:   #ffffff;
-  --header-border: #c1121f;
-}
-[data-theme="purple"] {
-  --color-primary: oklch(0.40 0.20 300);
-  --sidebar-bg:    #1a1030;
-  --header-bg:     #F3E5F5;
-  --header-text:   #374151;
-  --header-border: #E1BEE7;
-}
+/* 6 theme overrides — primary color + matching dark sidebar background */
+[data-theme="teal"]   { --color-primary: oklch(0.62 0.15 162); --sidebar-bg: oklch(0.26 0.12 162); }
+[data-theme="navy"]   { --color-primary: oklch(0.35 0.15 264); --sidebar-bg: oklch(0.20 0.10 264); }
+[data-theme="blue"]   { --color-primary: oklch(0.55 0.20 240); --sidebar-bg: oklch(0.24 0.13 240); }
+[data-theme="green"]  { --color-primary: oklch(0.45 0.15 145); --sidebar-bg: oklch(0.22 0.10 145); }
+[data-theme="red"]    { --color-primary: oklch(0.50 0.22 25);  --sidebar-bg: oklch(0.22 0.12 25);  }
+[data-theme="purple"] { --color-primary: oklch(0.40 0.20 300); --sidebar-bg: oklch(0.20 0.12 300); }
 
 @keyframes leenToastIn {
   from { opacity: 0; transform: translateX(16px); }
