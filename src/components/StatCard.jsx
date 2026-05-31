@@ -18,7 +18,7 @@ export default function StatCard({ icon: Icon, value, label, sublabel, color = '
       <Card.Content className="flex flex-row items-center gap-3 p-3 md:p-[14px]">
         {Icon && (
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${ICON_BG[color] || ICON_BG.default}`}>
-            <Icon size={17} strokeWidth={1.6} />
+            <Icon size={21} strokeWidth={1.5} />
           </div>
         )}
         <div className="min-w-0 flex-1">

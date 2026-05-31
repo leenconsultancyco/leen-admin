@@ -59,7 +59,7 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
         {/* Page title ribbon */}
         {title && (
           <div
-            className="-mx-4 md:-mx-7 -mt-4 md:mt-0 mb-5 md:mb-7 border-b border-primary-100 bg-primary-50"
+            className="-mx-4 md:-mx-7 -mt-4 md:mt-0 mb-5 md:mb-7 border-b border-default-200 bg-white"
           >
             <h1
               className="px-4 md:px-7 py-4 md:py-6 text-xl md:text-2xl font-bold"
