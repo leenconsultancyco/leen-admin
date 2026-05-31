@@ -6,7 +6,7 @@ export default function TopBar({ title, pendingCount = 0 }) {
   const { lang } = useI18n();
 
   return (
-    <header className="md:hidden fixed top-0 inset-x-0 z-20 bg-white border-b border-default-200 h-14 flex items-center px-4 gap-3">
+    <header className="md:hidden fixed top-0 inset-x-0 z-20 border-b border-default-200 h-14 flex items-center px-4 gap-3" style={{ backgroundColor: '#caf0f8' }}>
       <span className="text-lg font-bold text-primary shrink-0">ليـن</span>
 
       <h1
