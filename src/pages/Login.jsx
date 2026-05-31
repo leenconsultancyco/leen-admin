@@ -7,6 +7,17 @@ import LanguageToggle from '../components/LanguageToggle';
 
 const URL_KEY = 'leen_script_url';
 
+function BgImage() {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      backgroundImage: `url(${import.meta.env.BASE_URL}BCKGRND.jpg)`,
+      backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat',
+      opacity: 0.15, zIndex: -1, pointerEvents: 'none',
+    }} />
+  );
+}
+
 const INP = {
   display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
   borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
@@ -26,7 +37,8 @@ function SetupScreen({ t }) {
   }
 
   return (
-    <div className="min-h-screen bg-default-50 flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col relative">
+      <BgImage />
       <div className="flex justify-end p-4"><LanguageToggle /></div>
       <div className="flex-1 flex items-center justify-center px-4">
         <Card className="w-full max-w-sm shadow-lg">
@@ -101,7 +113,8 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-default-50 flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col relative">
+      <BgImage />
       <div className="flex justify-end p-4">
         <LanguageToggle />
       </div>

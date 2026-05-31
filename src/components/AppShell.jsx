@@ -33,7 +33,21 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
   }, []);
 
   return (
-    <div className="min-h-screen bg-default-50">
+    <div className="min-h-screen bg-transparent relative">
+      {/* Background image — 85% transparent */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundImage: `url(${import.meta.env.BASE_URL}BCKGRND.jpg)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.15,
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      />
       {/* Desktop sidebar */}
       <Sidebar />
 
