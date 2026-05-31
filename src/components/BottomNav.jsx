@@ -1,32 +1,36 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@heroui/react';
+import {
+  LayoutDashboard, CalendarDays, ArrowLeftRight, Receipt,
+  CreditCard, UserRound, Users, BarChart3, Settings, MoreHorizontal,
+} from 'lucide-react';
 import { useI18n } from '../i18n';
 import { logout } from '../auth';
 
 const PRIMARY_TABS = [
-  { key: 'dashboard', path: '/dashboard', icon: '🏠' },
-  { key: 'sessions',  path: '/sessions',  icon: '📅' },
-  { key: 'cashflow',  path: '/cashflow',  icon: '💰' },
-  { key: 'expenses',  path: '/expenses',  icon: '📋' },
+  { key: 'dashboard', path: '/dashboard', Icon: LayoutDashboard },
+  { key: 'sessions',  path: '/sessions',  Icon: CalendarDays    },
+  { key: 'cashflow',  path: '/cashflow',  Icon: ArrowLeftRight  },
+  { key: 'expenses',  path: '/expenses',  Icon: Receipt         },
 ];
 
 const MORE_ITEMS = [
-  { key: 'payouts',    path: '/payouts',    icon: '💳' },
-  { key: 'therapists', path: '/therapists', icon: '👩‍⚕️' },
-  { key: 'clients',    path: '/clients',    icon: '👥' },
-  { key: 'reports',    path: '/reports',    icon: '📊' },
-  { key: 'settings',   path: '/settings',   icon: '⚙️' },
+  { key: 'payouts',    path: '/payouts',    Icon: CreditCard  },
+  { key: 'therapists', path: '/therapists', Icon: UserRound   },
+  { key: 'clients',    path: '/clients',    Icon: Users       },
+  { key: 'reports',    path: '/reports',    Icon: BarChart3   },
+  { key: 'settings',   path: '/settings',  Icon: Settings    },
 ];
 
-function TabLink({ icon, label, active, path }) {
+function TabLink({ Icon, label, active, path }) {
   return (
     <Link
       to={path}
       className={`flex flex-col items-center gap-0.5 px-2 py-2 flex-1 text-xs transition-colors
         ${active ? 'text-primary font-semibold' : 'text-default-400'}`}
     >
-      <span className="text-xl leading-none">{icon}</span>
+      <Icon size={20} strokeWidth={1.6} />
       <span>{label}</span>
     </Link>
   );
@@ -44,8 +48,8 @@ export default function BottomNav() {
         className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-default-200 flex z-20"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {PRIMARY_TABS.map(({ key, path, icon }) => (
-          <TabLink key={key} path={path} icon={icon} label={t(`nav.${key}`)} active={location.pathname === path} />
+        {PRIMARY_TABS.map(({ key, path, Icon }) => (
+          <TabLink key={key} path={path} Icon={Icon} label={t(`nav.${key}`)} active={location.pathname === path} />
         ))}
 
         <button
@@ -54,7 +58,7 @@ export default function BottomNav() {
           className={`flex flex-col items-center gap-0.5 px-2 py-2 flex-1 text-xs transition-colors
             ${moreActive ? 'text-primary font-semibold' : 'text-default-400'}`}
         >
-          <span className="text-xl leading-none">•••</span>
+          <MoreHorizontal size={20} strokeWidth={1.6} />
           <span>{t('general.more')}</span>
         </button>
       </nav>
@@ -70,7 +74,7 @@ export default function BottomNav() {
             <div className="w-10 h-1 bg-default-200 rounded-full mx-auto mb-4" />
             <p className="text-sm font-semibold text-default-500 mb-3">{t('general.more')}</p>
             <div className="grid grid-cols-3 gap-3 mb-4">
-              {MORE_ITEMS.map(({ key, path, icon }) => (
+              {MORE_ITEMS.map(({ key, path, Icon }) => (
                 <Link
                   key={key}
                   to={path}
@@ -78,7 +82,7 @@ export default function BottomNav() {
                   className={`flex flex-col items-center gap-1 py-3 rounded-xl text-sm transition-colors
                     ${location.pathname === path ? 'bg-primary/10 text-primary font-semibold' : 'bg-default-100 text-default-600'}`}
                 >
-                  <span className="text-2xl leading-none">{icon}</span>
+                  <Icon size={22} strokeWidth={1.6} />
                   <span>{t(`nav.${key}`)}</span>
                 </Link>
               ))}

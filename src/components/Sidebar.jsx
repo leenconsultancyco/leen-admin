@@ -1,20 +1,24 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@heroui/react';
+import {
+  LayoutDashboard, CalendarDays, ArrowLeftRight,
+  Receipt, CreditCard, UserRound, Users, BarChart3, Settings, LogOut,
+} from 'lucide-react';
 import { useI18n } from '../i18n';
 import { logout, getAdminUsername } from '../auth';
 import LanguageToggle from './LanguageToggle';
 import ConnectionBadge from './ConnectionBadge';
 
 const NAV_ITEMS = [
-  { key: 'dashboard',  path: '/dashboard',  icon: '🏠' },
-  { key: 'sessions',   path: '/sessions',   icon: '📅' },
-  { key: 'cashflow',   path: '/cashflow',   icon: '💰' },
-  { key: 'expenses',   path: '/expenses',   icon: '📋' },
-  { key: 'payouts',    path: '/payouts',    icon: '💳' },
-  { key: 'therapists', path: '/therapists', icon: '👩‍⚕️' },
-  { key: 'clients',    path: '/clients',    icon: '👥' },
-  { key: 'reports',    path: '/reports',    icon: '📊' },
-  { key: 'settings',   path: '/settings',   icon: '⚙️' },
+  { key: 'dashboard',  path: '/dashboard',  Icon: LayoutDashboard },
+  { key: 'sessions',   path: '/sessions',   Icon: CalendarDays    },
+  { key: 'cashflow',   path: '/cashflow',   Icon: ArrowLeftRight  },
+  { key: 'expenses',   path: '/expenses',   Icon: Receipt         },
+  { key: 'payouts',    path: '/payouts',    Icon: CreditCard      },
+  { key: 'therapists', path: '/therapists', Icon: UserRound       },
+  { key: 'clients',    path: '/clients',    Icon: Users           },
+  { key: 'reports',    path: '/reports',    Icon: BarChart3       },
+  { key: 'settings',   path: '/settings',   Icon: Settings        },
 ];
 
 const SIDEBAR_BG     = 'var(--sidebar-bg)';
@@ -40,7 +44,7 @@ export default function Sidebar() {
 
       {/* Nav items */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 8px' }}>
-        {NAV_ITEMS.map(({ key, path, icon }) => {
+        {NAV_ITEMS.map(({ key, path, Icon }) => {
           const active = location.pathname === path;
           return (
             <Link
@@ -48,7 +52,7 @@ export default function Sidebar() {
               to={path}
               className={`leen-nav-item${active ? ' leen-nav-active' : ''}`}
             >
-              <span style={{ fontSize: '16px', lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+              <Icon size={17} strokeWidth={1.6} style={{ flexShrink: 0 }} />
               <span>{t(`nav.${key}`)}</span>
             </Link>
           );
@@ -69,7 +73,8 @@ export default function Sidebar() {
             onPress={logout}
             style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: '#ffffff', minWidth: 'unset' }}
           >
-            {t('nav.logout')}
+            <LogOut size={14} strokeWidth={1.8} />
+            <span className="ms-1">{t('nav.logout')}</span>
           </Button>
         </div>
       </div>

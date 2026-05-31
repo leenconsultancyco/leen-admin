@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Skeleton } from '@heroui/react';
+import { CalendarDays, Banknote, TrendingUp, Bell, Receipt, Wallet } from 'lucide-react';
 import { getDashboardData } from '../api';
 import { useI18n } from '../i18n';
 import StatCard from '../components/StatCard';
@@ -54,12 +55,12 @@ export default function Dashboard() {
           Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
         ) : (
           <>
-            <StatCard icon="📅" label={t('dashboard.todaySessions')}   value={d.todaySessions  ?? 0} color="default" />
-            <StatCard icon="💵" label={t('dashboard.todayRevenue')}    value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="success" />
-            <StatCard icon="📈" label={t('dashboard.overallRevenue')}  value={`${Number(d.overallRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="primary" />
-            <StatCard icon="🔔" label={t('dashboard.pendingBookings')} value={d.pendingCount ?? 0} color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'} />
-            <StatCard icon="💸" label={t('dashboard.overallExpenses')} value={`${Number(d.overallExpenses ?? 0).toLocaleString('en-EG')} EGP`} color="danger" />
-            <StatCard icon="💰" label={t('dashboard.overallProfit')}   value={`${Number(d.overallProfit ?? 0).toLocaleString('en-EG')} EGP`} color={(d.overallProfit ?? 0) >= 0 ? 'success' : 'danger'} />
+            <StatCard icon={CalendarDays} label={t('dashboard.todaySessions')}   value={d.todaySessions  ?? 0} color="default" />
+            <StatCard icon={Banknote}     label={t('dashboard.todayRevenue')}    value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="success" />
+            <StatCard icon={TrendingUp}   label={t('dashboard.overallRevenue')}  value={`${Number(d.overallRevenue ?? 0).toLocaleString('en-EG')} EGP`} color="primary" />
+            <StatCard icon={Bell}         label={t('dashboard.pendingBookings')} value={d.pendingCount ?? 0} color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'} />
+            <StatCard icon={Receipt}      label={t('dashboard.overallExpenses')} value={`${Number(d.overallExpenses ?? 0).toLocaleString('en-EG')} EGP`} color="danger" />
+            <StatCard icon={Wallet}       label={t('dashboard.overallProfit')}   value={`${Number(d.overallProfit ?? 0).toLocaleString('en-EG')} EGP`} color={(d.overallProfit ?? 0) >= 0 ? 'success' : 'danger'} />
           </>
         )}
       </div>
