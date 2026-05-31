@@ -64,61 +64,18 @@ export default function Dashboard() {
     <div className="flex flex-col gap-5">
       <OfflineBanner />
 
-      {/* ── Top 4 stat cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-[18px]">
+      {/* ── All 6 KPI cards — single row on desktop ── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-[18px]">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)
+          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
         ) : (
           <>
-            <StatCard
-              icon={CalendarDays}
-              label={t('dashboard.todaySessions')}
-              sublabel={t('general.today')}
-              value={d.todaySessions ?? 0}
-              color="default"
-            />
-            <StatCard
-              icon={Banknote}
-              label={t('dashboard.todayRevenue')}
-              sublabel={t('general.today')}
-              value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`}
-              color="success"
-            />
-            <StatCard
-              icon={TrendingUp}
-              label={`${t('dashboard.revenue')} · ${monthLabel}`}
-              value={`${Number(d.totalRevenue ?? 0).toLocaleString('en-EG')} EGP`}
-              color="primary"
-            />
-            <StatCard
-              icon={Bell}
-              label={t('dashboard.pendingBookings')}
-              sublabel={t('dashboard.awaitingAction')}
-              value={d.pendingCount ?? 0}
-              color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'}
-            />
-          </>
-        )}
-      </div>
-
-      {/* ── Summary row: expenses + profit ── */}
-      <div className="grid grid-cols-2 gap-[18px]">
-        {loading ? (
-          Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
-        ) : (
-          <>
-            <StatCard
-              icon={Receipt}
-              label={t('dashboard.overallExpenses')}
-              value={`${Number(d.overallExpenses ?? 0).toLocaleString('en-EG')} EGP`}
-              color="danger"
-            />
-            <StatCard
-              icon={Wallet}
-              label={t('dashboard.overallProfit')}
-              value={`${Number(d.overallProfit ?? 0).toLocaleString('en-EG')} EGP`}
-              color={(d.overallProfit ?? 0) >= 0 ? 'success' : 'danger'}
-            />
+            <StatCard icon={CalendarDays} label={t('dashboard.todaySessions')}  sublabel={t('general.today')}               value={d.todaySessions ?? 0}                                                         color="default" />
+            <StatCard icon={Banknote}     label={t('dashboard.todayRevenue')}   sublabel={t('general.today')}               value={`${Number(d.todayRevenue ?? 0).toLocaleString('en-EG')} EGP`}               color="success" />
+            <StatCard icon={TrendingUp}   label={`${t('dashboard.revenue')} · ${monthLabel}`}                               value={`${Number(d.totalRevenue ?? 0).toLocaleString('en-EG')} EGP`}               color="primary" />
+            <StatCard icon={Bell}         label={t('dashboard.pendingBookings')} sublabel={t('dashboard.awaitingAction')}   value={d.pendingCount ?? 0}                                                          color={(d.pendingCount ?? 0) > 0 ? 'warning' : 'default'} />
+            <StatCard icon={Receipt}      label={t('dashboard.overallExpenses')}                                            value={`${Number(d.overallExpenses ?? 0).toLocaleString('en-EG')} EGP`}             color="danger" />
+            <StatCard icon={Wallet}       label={t('dashboard.overallProfit')}                                              value={`${Number(d.overallProfit ?? 0).toLocaleString('en-EG')} EGP`}               color={(d.overallProfit ?? 0) >= 0 ? 'success' : 'danger'} />
           </>
         )}
       </div>
