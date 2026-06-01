@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Spinner } from '@heroui/react';
 import { confirmBooking, cancelBooking, markPaid, addTransaction } from '../api';
 import { toast } from './Toast';
@@ -119,9 +120,10 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
             {t('sessions.actions') || 'Actions'} ▾
           </Button>
         </div>
+      </div>
 
-        {open && (
-          <div ref={dropRef} style={dropStyle}>
+      {open && createPortal(
+        <div ref={dropRef} style={dropStyle}>
 
             {step === 'menu' && (
               <>
@@ -200,9 +202,9 @@ export default function SessionActionsMenu({ booking, onDone, onEdit, onDelete }
                 </div>
               </div>
             )}
-          </div>
-        )}
-      </div>
+        </div>,
+        document.body
+      )}
 
       <ConfirmModal
         isOpen={cancelOpen}

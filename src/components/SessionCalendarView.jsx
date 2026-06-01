@@ -142,7 +142,7 @@ export default function SessionCalendarView({ sessions, therapistId, therapists,
           {dayHeaders.map((d, i) => (
             <div key={d} style={{
               textAlign: 'center', fontSize: '11px', fontWeight: 600, padding: '3px 0',
-              color: (i === 5 || i === 6) ? '#d1d5db' : '#9ca3af',
+              color: (i === 5 || i === 6) ? '#9ca3af' : '#111827',
             }}>
               {d}
             </div>
@@ -166,18 +166,17 @@ export default function SessionCalendarView({ sessions, therapistId, therapists,
                 onClick={() => !isWeekend && handleDayClick(day)}
                 style={{
                   minHeight: '68px', padding: '4px', borderRadius: '6px',
-                  border: isSel ? '2px solid #0E9B73' : '1px solid #e5e7eb',
+                  border: isSel ? '2px solid #0E9B73' : `1px solid ${isWeekend ? '#d1d5db' : '#e5e7eb'}`,
                   borderBottom: isToday && !isSel ? '3px solid #0E9B73' : undefined,
-                  backgroundColor: isWeekend ? '#fafafa' : isSel ? '#f0fdf4' : '#fff',
+                  backgroundColor: isWeekend ? '#e9eaec' : isSel ? '#f0fdf4' : '#fff',
                   cursor: isWeekend ? 'default' : 'pointer',
-                  opacity: isWeekend ? 0.45 : 1,
                   transition: 'border-color 0.1s, background 0.1s',
                   overflow: 'hidden',
                 }}
               >
                 <div style={{
                   fontSize: '11px', fontWeight: isToday ? 700 : 400,
-                  color: isToday ? '#0E9B73' : '#374151', marginBottom: '2px',
+                  color: isToday ? '#0E9B73' : isWeekend ? '#9ca3af' : '#374151', marginBottom: '2px',
                 }}>
                   {day}
                 </div>
