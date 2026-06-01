@@ -180,7 +180,7 @@ export default function Sessions() {
       <OfflineBanner />
 
       {/* Filter card */}
-      <div className="rounded-2xl border border-default-200 bg-white shadow-sm px-4 py-3">
+      <div className="leen-card rounded-2xl bg-white shadow-sm px-4 py-3">
         <div className="flex items-center gap-3 flex-wrap">
 
           {/* Filter funnel icon */}
@@ -189,13 +189,13 @@ export default function Sessions() {
           </svg>
 
           <FilterSelect value={therapistId} onChange={setTherapistId}
-            options={[{ id: '', label: t('sessions.allTherapists') || 'All therapists' }, ...therapists.map((th) => ({ id: th.Therapist_ID, label: th.Name_EN }))]} />
+            options={[{ id: '', label: t('sessions.allTherapists') }, ...therapists.map((th) => ({ id: th.Therapist_ID, label: th.Name_EN }))]} />
 
           <FilterSelect value={status} onChange={setStatus}
-            options={[{ id: '', label: 'All statuses' }, ...STATUSES.map((s) => ({ id: s, label: s }))]} />
+            options={[{ id: '', label: t('sessions.allStatuses') }, ...STATUSES.map((s) => ({ id: s, label: s }))]} />
 
           <FilterSelect value={payment} onChange={setPayment}
-            options={[{ id: '', label: 'All payments' }, ...PAYMENTS.map((p) => ({ id: p, label: p }))]} />
+            options={[{ id: '', label: t('sessions.allPayments') }, ...PAYMENTS.map((p) => ({ id: p, label: p }))]} />
 
           {/* Month + Year combined visually */}
           <div className="flex gap-1">
@@ -220,20 +220,24 @@ export default function Sessions() {
               />
             </div>
 
-            {/* Segmented table / calendar toggle */}
-            <div className="flex bg-default-100 rounded-lg p-0.5 gap-0.5">
+            {/* Table / Calendar toggle — solid colored buttons */}
+            <div className="flex gap-1.5">
               <button
                 onClick={() => setView('table')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  view === 'table' ? 'bg-white text-primary shadow-sm' : 'text-default-500 hover:text-default-700'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  view === 'table'
+                    ? 'bg-primary border-primary text-white shadow-sm'
+                    : 'bg-white border-default-200 text-default-500 hover:border-primary hover:text-primary'
                 }`}
               >
                 ≡ {t('sessions.tableView')}
               </button>
               <button
                 onClick={() => setView('calendar')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  view === 'calendar' ? 'bg-white text-primary shadow-sm' : 'text-default-500 hover:text-default-700'
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                  view === 'calendar'
+                    ? 'bg-primary border-primary text-white shadow-sm'
+                    : 'bg-white border-default-200 text-default-500 hover:border-primary hover:text-primary'
                 }`}
               >
                 ⊞ {t('sessions.calendarView')}
@@ -245,7 +249,7 @@ export default function Sessions() {
 
       {/* Totals — single centered card */}
       <div className="flex justify-center">
-        <Card className="w-full max-w-2xl">
+        <Card className="leen-card w-full max-w-2xl">
           <Card.Content>
             <div className="flex flex-wrap justify-around gap-x-8 gap-y-3 text-center py-1">
               {[
@@ -267,15 +271,17 @@ export default function Sessions() {
       {view === 'table' ? (
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
       ) : (
-        <SessionCalendarView
-          key={`cal-${month}-${year}-${therapistId}`}
-          sessions={sessions}
-          therapistId={therapistId}
-          therapists={therapists}
-          month={Number(month)}
-          year={Number(year)}
-          onBookingSuccess={handleCalendarBookingSuccess}
-        />
+        <div className="leen-card rounded-2xl bg-white shadow-sm overflow-hidden p-4">
+          <SessionCalendarView
+            key={`cal-${month}-${year}-${therapistId}`}
+            sessions={sessions}
+            therapistId={therapistId}
+            therapists={therapists}
+            month={Number(month)}
+            year={Number(year)}
+            onBookingSuccess={handleCalendarBookingSuccess}
+          />
+        </div>
       )}
 
       <SessionEditModal

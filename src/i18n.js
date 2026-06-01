@@ -44,6 +44,9 @@ export const translations = {
     sessions: {
       title:            'Sessions',
       allSessions:      'All Sessions',
+      allTherapists:    'All Therapists',
+      allStatuses:      'All Statuses',
+      allPayments:      'All Payments',
       filter:           'Filter',
       filterByTherapist:'Filter by Therapist',
       filterByStatus:   'Filter by Status',
@@ -296,6 +299,9 @@ export const translations = {
     sessions: {
       title:            'الجلسات',
       allSessions:      'كل الجلسات',
+      allTherapists:    'كل المعالجين',
+      allStatuses:      'كل الحالات',
+      allPayments:      'كل المدفوعات',
       filter:           'تصفية',
       filterByTherapist:'تصفية حسب المعالج',
       filterByStatus:   'تصفية حسب الحالة',
