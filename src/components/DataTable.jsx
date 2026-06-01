@@ -53,57 +53,59 @@ export default function DataTable({ columns = [], data = [], loading = false, em
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Desktop plain-HTML table (HeroUI v3 Table API uncertain — using plain HTML per cheat sheet) */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-default-200">
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  onClick={col.sortable ? () => toggleSort(col.key) : undefined}
-                  className={`px-3 py-2 text-start text-xs font-semibold uppercase text-default-500 bg-default-50
-                    ${col.sortable ? 'cursor-pointer select-none hover:text-default-800' : ''}`}
-                >
-                  {col.label}{col.sortable && sort.key === col.key && (sort.dir === 'asc' ? ' ↑' : ' ↓')}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b border-default-100">
-                  {columns.map((col) => (
-                    <td key={col.key} className="px-3 py-2">
-                      <Skeleton className="h-4 w-full rounded" />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : pageRows.length === 0 ? (
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-2xl border border-default-200 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
               <tr>
-                <td colSpan={columns.length} className="px-3 py-8 text-center text-default-400 text-sm">
-                  {emptyMessage}
-                </td>
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    onClick={col.sortable ? () => toggleSort(col.key) : undefined}
+                    className={`px-4 py-3 text-start text-xs font-semibold uppercase tracking-wide text-default-500 bg-gray-50 border-b border-default-200
+                      ${col.sortable ? 'cursor-pointer select-none hover:text-default-800' : ''}`}
+                  >
+                    {col.label}{col.sortable && sort.key === col.key && (sort.dir === 'asc' ? ' ↑' : ' ↓')}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              pageRows.map((row, i) => (
-                <tr
-                  key={i}
-                  onClick={() => onRowClick?.(row)}
-                  className={`border-b border-default-100 ${onRowClick ? 'cursor-pointer hover:bg-default-50' : ''}`}
-                >
-                  {columns.map((col) => (
-                    <td key={col.key} className="px-3 py-2 text-default-700">
-                      {col.render ? col.render(row) : (row[col.key] ?? '—')}
-                    </td>
-                  ))}
+            </thead>
+            <tbody className="bg-white">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="border-b border-default-100">
+                    {columns.map((col) => (
+                      <td key={col.key} className="px-4 py-3">
+                        <Skeleton className="h-4 w-full rounded" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : pageRows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="px-4 py-10 text-center text-default-400 text-sm">
+                    {emptyMessage}
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                pageRows.map((row, i) => (
+                  <tr
+                    key={i}
+                    onClick={() => onRowClick?.(row)}
+                    className={`border-b border-default-100 last:border-b-0 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-blue-50/40' : 'hover:bg-gray-50/60'}`}
+                  >
+                    {columns.map((col) => (
+                      <td key={col.key} className="px-4 py-3 text-default-700">
+                        {col.render ? col.render(row) : (row[col.key] ?? '—')}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Mobile card list */}

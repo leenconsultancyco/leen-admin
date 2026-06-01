@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Chip } from '@heroui/react';
+import { createPortal } from 'react-dom';
+import { Button, Chip, Card } from '@heroui/react';
 import { getSessions, getTherapistsFull, deleteBooking, deleteTransactionByBookingId } from '../api';
 import { toast } from '../components/Toast';
 import { buildSessionsExcel } from '../utils/excel';
@@ -27,7 +28,6 @@ function statusColor(s) {
   return { Confirmed: 'success', Pending: 'warning', Cancelled: 'danger', Completed: 'primary', 'No-show': 'default' }[s] || 'default';
 }
 
-// Thin native-select wrapper used for the filter row — avoids ListBox verbosity for simple dropdowns
 function FilterSelect({ label, value, onChange, options }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -45,11 +45,11 @@ function FilterSelect({ label, value, onChange, options }) {
 
 export default function Sessions() {
   const { t } = useI18n();
-  const [month, setMonth]           = useState(String(NOW.getMonth() + 1));
-  const [year, setYear]             = useState(String(NOW.getFullYear()));
+  const [month, setMonth]             = useState(String(NOW.getMonth() + 1));
+  const [year, setYear]               = useState(String(NOW.getFullYear()));
   const [therapistId, setTherapistId] = useState('');
-  const [status, setStatus]         = useState('');
-  const [payment, setPayment]       = useState('');
+  const [status, setStatus]           = useState('');
+  const [payment, setPayment]         = useState('');
   const [sessions, setSessions]       = useState([]);
   const [therapists, setTherapists]   = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -58,9 +58,15 @@ export default function Sessions() {
   const [deletingSession, setDeleting]= useState(null);
   const [deleting, setDelBusy]        = useState(false);
   const [view, setView]               = useState('table');
+  const [portalTarget, setPortalTarget] = useState(null);
 
   const years  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  // Grab the portal slot once AppShell's title ribbon is in the DOM
+  useEffect(() => {
+    setPortalTarget(document.getElementById('page-title-extras'));
+  }, []);
 
   useEffect(() => {
     getTherapistsFull().then((r) => { setTherapists(r.success && Array.isArray(r.data) ? r.data : []); });
@@ -141,31 +147,31 @@ export default function Sessions() {
     },
   ];
 
-  return (
-    <div className="flex flex-col gap-4">
-      <OfflineBanner />
-      <div className="flex flex-wrap gap-2 items-end">
-        <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
-          options={months.map((m) => ({ id: String(m), label: m }))} />
-        <FilterSelect value={year} onChange={setYear} label=""
-          options={years.map((y) => ({ id: String(y), label: y }))} />
-        <FilterSelect value={therapistId} onChange={setTherapistId} label={t('sessions.filterByTherapist')}
-          options={[{ id: '', label: t('sessions.allSessions') }, ...therapists.map((th) => ({ id: th.Therapist_ID, label: th.Name_EN }))]} />
-        <FilterSelect value={status} onChange={setStatus} label={t('sessions.filterByStatus')}
-          options={[{ id: '', label: t('sessions.allSessions') }, ...STATUSES.map((s) => ({ id: s, label: s }))]} />
-        <FilterSelect value={payment} onChange={setPayment} label={t('sessions.payment')}
-          options={[{ id: '', label: 'All' }, ...PAYMENTS.map((p) => ({ id: p, label: p }))]} />
+  // Controls rendered into the AppShell title ribbon via portal
+  const filterBar = (
+    <div className="px-4 md:px-7 pb-3 border-t border-default-100 flex flex-wrap items-end gap-2">
+      <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
+        options={months.map((m) => ({ id: String(m), label: m }))} />
+      <FilterSelect value={year} onChange={setYear} label=""
+        options={years.map((y) => ({ id: String(y), label: y }))} />
+      <FilterSelect value={therapistId} onChange={setTherapistId} label={t('sessions.filterByTherapist')}
+        options={[{ id: '', label: t('sessions.allSessions') }, ...therapists.map((th) => ({ id: th.Therapist_ID, label: th.Name_EN }))]} />
+      <FilterSelect value={status} onChange={setStatus} label={t('sessions.filterByStatus')}
+        options={[{ id: '', label: t('sessions.allSessions') }, ...STATUSES.map((s) => ({ id: s, label: s }))]} />
+      <FilterSelect value={payment} onChange={setPayment} label={t('sessions.payment')}
+        options={[{ id: '', label: 'All' }, ...PAYMENTS.map((p) => ({ id: p, label: p }))]} />
+      <div className="flex items-end gap-2 ms-auto flex-wrap">
         <Button size="sm" variant="flat" onPress={() => buildSessionsExcel(filtered, month, year)}>
           {t('sessions.export')}
         </Button>
         <Button size="sm" color="primary" onPress={() => setAdding(true)}>
           + {t('sessions.addSession') || 'Add Session'}
         </Button>
-        <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+        <div className="flex gap-1">
           <button
             onClick={() => setView('table')}
+            className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors"
             style={{
-              padding: '5px 12px', borderRadius: '7px', fontSize: '12px', cursor: 'pointer',
               border: `1.5px solid ${view === 'table' ? '#0E9B73' : '#d1d5db'}`,
               backgroundColor: view === 'table' ? '#0E9B73' : '#fff',
               color: view === 'table' ? '#fff' : '#6b7280',
@@ -176,8 +182,8 @@ export default function Sessions() {
           </button>
           <button
             onClick={() => setView('calendar')}
+            className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors"
             style={{
-              padding: '5px 12px', borderRadius: '7px', fontSize: '12px', cursor: 'pointer',
               border: `1.5px solid ${view === 'calendar' ? '#0E9B73' : '#d1d5db'}`,
               backgroundColor: view === 'calendar' ? '#0E9B73' : '#fff',
               color: view === 'calendar' ? '#fff' : '#6b7280',
@@ -188,19 +194,34 @@ export default function Sessions() {
           </button>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-        {[
-          [t('sessions.allSessions'),    totals.sessions],
-          [t('sessions.fee'),            fmt(totals.revenue)],
-          [t('sessions.therapistShare'), fmt(totals.therapist)],
-          [t('sessions.centerShare'),    fmt(totals.center)],
-        ].map(([label, val]) => (
-          <div key={label} className="bg-default-50 rounded-xl px-3 py-2">
-            <p className="text-default-400 text-xs">{label}</p>
-            <p className="font-semibold text-default-800" dir="ltr">{val}</p>
-          </div>
-        ))}
+  return (
+    <div className="flex flex-col gap-4">
+      {portalTarget && createPortal(filterBar, portalTarget)}
+
+      <OfflineBanner />
+
+      {/* Totals — single centered card */}
+      <div className="flex justify-center">
+        <Card className="w-full max-w-2xl">
+          <Card.Content>
+            <div className="flex flex-wrap justify-around gap-x-8 gap-y-3 text-center py-1">
+              {[
+                [t('sessions.allSessions'),    totals.sessions],
+                [t('sessions.fee'),            fmt(totals.revenue)],
+                [t('sessions.therapistShare'), fmt(totals.therapist)],
+                [t('sessions.centerShare'),    fmt(totals.center)],
+              ].map(([label, val]) => (
+                <div key={label} className="flex flex-col gap-0.5 min-w-[100px]">
+                  <span className="text-xs text-default-400">{label}</span>
+                  <span className="text-base font-semibold text-default-800" dir="ltr">{val}</span>
+                </div>
+              ))}
+            </div>
+          </Card.Content>
+        </Card>
       </div>
 
       {view === 'table' ? (
