@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Card, Button, Chip, Skeleton } from '@heroui/react';
+import { Button, Skeleton } from '@heroui/react';
 import { getTherapistsFull, updateTherapist } from '../api';
 import { useI18n } from '../i18n';
 import TherapistEditModal from '../components/TherapistEditModal';
+import TherapistCard from '../components/TherapistCard';
+import BlockDateModal from '../components/BlockDateModal';
 import PageFilterBar, { SearchInput } from '../components/PageFilterBar';
 import KpiCard from '../components/KpiCard';
 
@@ -19,27 +21,15 @@ const BLANK_THERAPIST = {
   Photo_URL: '', Display_Order: '', Active: true,
 };
 
-function TherapistAvatar({ therapist }) {
-  if (therapist.Photo_URL) {
-    return <img src={therapist.Photo_URL} alt={therapist.Name_EN}
-      className="w-12 h-12 rounded-full object-cover shrink-0" />;
-  }
-  const letters = (therapist.Name_EN || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-  return (
-    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold shrink-0">
-      {letters}
-    </div>
-  );
-}
-
 export default function TherapistMgmt() {
   const { t } = useI18n();
-  const [therapists, setTherapists]   = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [search, setSearch]           = useState('');
-  const [filter, setFilter]           = useState('all');
-  const [editing, setEditing]         = useState(null);
-  const [adding, setAdding]           = useState(false);
+  const [therapists, setTherapists]     = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [search, setSearch]             = useState('');
+  const [filter, setFilter]             = useState('all');
+  const [editing, setEditing]           = useState(null);
+  const [adding, setAdding]             = useState(false);
+  const [blockTarget, setBlockTarget]   = useState(null);
   const [actionsTarget, setActionsTarget] = useState(null);
 
   useEffect(() => { setActionsTarget(document.getElementById('page-title-actions')); }, []);
@@ -71,13 +61,17 @@ export default function TherapistMgmt() {
 
   const counts = useMemo(() => {
     const safe = Array.isArray(therapists) ? therapists : [];
-    return { total: safe.length, active: safe.filter((th) => th.Active).length, inactive: safe.filter((th) => !th.Active).length };
+    return {
+      total:    safe.length,
+      active:   safe.filter((th) => th.Active).length,
+      inactive: safe.filter((th) => !th.Active).length,
+    };
   }, [therapists]);
 
-  const FILTERS = [
-    { id: 'all',      label: t('general.all') || 'All'           },
-    { id: 'active',   label: t('therapistMgmt.active') || 'Active'   },
-    { id: 'inactive', label: t('therapistMgmt.inactive') || 'Inactive' },
+  const FILTER_PILLS = [
+    { id: 'all',      label: t('general.all')              || 'All'      },
+    { id: 'active',   label: t('therapistMgmt.active')     || 'Active'   },
+    { id: 'inactive', label: t('therapistMgmt.inactive')   || 'Inactive' },
   ];
 
   return (
@@ -90,9 +84,8 @@ export default function TherapistMgmt() {
       )}
 
       <PageFilterBar right={<SearchInput value={search} onChange={setSearch} />}>
-        {/* Active / Inactive pill filter */}
         <div className="flex gap-1.5">
-          {FILTERS.map(({ id, label }) => (
+          {FILTER_PILLS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setFilter(id)}
@@ -110,49 +103,26 @@ export default function TherapistMgmt() {
 
       <KpiCard metrics={[
         { label: t('therapistMgmt.total')    || 'Total Therapists', value: String(counts.total) },
-        { label: t('therapistMgmt.active')   || 'Active',           value: String(counts.active),   cls: 'text-success' },
+        { label: t('therapistMgmt.active')   || 'Active',           value: String(counts.active),   cls: 'text-success'     },
         { label: t('therapistMgmt.inactive') || 'Inactive',         value: String(counts.inactive), cls: 'text-default-400' },
       ]} />
 
       {loading ? (
         <div className="flex flex-col gap-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}
         </div>
       ) : filtered.length === 0 ? (
         <p className="text-sm text-default-400 text-center py-8">{t('general.noResults')}</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((th) => (
-            <Card key={th.Therapist_ID} className="leen-card" style={{ opacity: th.Active ? 1 : 0.6 }}>
-              <Card.Content className="flex flex-row items-center gap-4 p-4">
-                <TherapistAvatar therapist={th} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-default-800 truncate">{th.Name_EN}</p>
-                    <Chip size="sm" color={th.Active ? 'success' : 'default'} variant="flat">
-                      {th.Active ? t('therapistMgmt.active') : t('therapistMgmt.inactive')}
-                    </Chip>
-                  </div>
-                  <p className="text-xs text-default-400 truncate">{th.Name_AR}</p>
-                  <p className="text-xs text-default-500 mt-0.5">{th.Title_EN}</p>
-                </div>
-                <div className="flex flex-col gap-1.5 items-end shrink-0">
-                  <Button size="sm" variant="flat" onPress={() => setEditing(th)}>
-                    {t('general.edit')}
-                  </Button>
-                  <button
-                    onClick={() => handleToggleActive(th)}
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border cursor-pointer transition-colors ${
-                      th.Active
-                        ? 'border-danger text-danger hover:bg-danger hover:text-white'
-                        : 'border-primary text-primary hover:bg-primary hover:text-white'
-                    }`}
-                  >
-                    {th.Active ? (t('therapistMgmt.deactivate') || 'Deactivate') : (t('therapistMgmt.reactivate') || 'Reactivate')}
-                  </button>
-                </div>
-              </Card.Content>
-            </Card>
+            <TherapistCard
+              key={th.Therapist_ID}
+              therapist={th}
+              onEdit={setEditing}
+              onToggleActive={handleToggleActive}
+              onBlockDate={setBlockTarget}
+            />
           ))}
         </div>
       )}
@@ -169,6 +139,14 @@ export default function TherapistMgmt() {
           therapist={BLANK_THERAPIST} isNew={true} isOpen={adding}
           onClose={() => setAdding(false)}
           onSuccess={() => { setAdding(false); load(); }}
+        />
+      )}
+      {blockTarget && (
+        <BlockDateModal
+          therapist={blockTarget}
+          isOpen={!!blockTarget}
+          onClose={() => setBlockTarget(null)}
+          onSuccess={load}
         />
       )}
     </div>
