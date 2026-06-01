@@ -6,8 +6,9 @@
         var query = window.location.search;
         if (query && query[1] === 'p') {
           var path = query.slice(3).replace(/&q=(.*)/, '?$1');
+          // path already starts with '/' (e.g. '/sessions') — no trailing slash on base
           window.history.replaceState(null, null,
-            '/leen-admin/' + path + window.location.hash
+            '/leen-admin' + path + window.location.hash
           );
         }
       })();
