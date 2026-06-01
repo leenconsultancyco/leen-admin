@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Card } from '@heroui/react';
 import { getExpenses, deleteExpense } from '../api';
 import { buildExpensesExcel } from '../utils/excel';
@@ -9,33 +10,30 @@ import AddExpenseModal from '../components/AddExpenseModal';
 import EditExpenseModal from '../components/EditExpenseModal';
 import ConfirmModal from '../components/ConfirmModal';
 import OfflineBanner from '../components/OfflineBanner';
+import PageFilterBar, { FilterSelect, SearchInput } from '../components/PageFilterBar';
+import KpiCard from '../components/KpiCard';
 
-const NOW    = new Date();
-const YEARS  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+const NOW         = new Date();
+const YEARS       = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
+const MONTHS      = Array.from({ length: 12 }, (_, i) => i + 1);
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function FilterSelect({ label, value, onChange, options }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      {label && <span className="text-xs text-default-500">{label}</span>}
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none">
-        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
-      </select>
-    </div>
-  );
-}
+const fmt = (n) => `${Number(n).toLocaleString('en-EG')} EGP`;
 
 export default function Expenses() {
   const { t } = useI18n();
-  const [month, setMonth]           = useState(String(NOW.getMonth() + 1));
-  const [year, setYear]             = useState(String(NOW.getFullYear()));
-  const [rows, setRows]             = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [month, setMonth]               = useState(String(NOW.getMonth() + 1));
+  const [year, setYear]                 = useState(String(NOW.getFullYear()));
+  const [search, setSearch]             = useState('');
+  const [rows, setRows]                 = useState([]);
+  const [loading, setLoading]           = useState(true);
   const [addOpen, setAddOpen]           = useState(false);
-  const [duplicatingRow, setDuplicatingRow] = useState(null);
+  const [duplicatingRow, setDuplicating]= useState(null);
   const [editingRow, setEditingRow]     = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [actionsTarget, setActionsTarget] = useState(null);
+
+  useEffect(() => { setActionsTarget(document.getElementById('page-title-actions')); }, []);
 
   const load = () => {
     setLoading(true);
@@ -47,13 +45,22 @@ export default function Expenses() {
 
   useEffect(load, [month, year]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter((r) =>
+      (r.Item || '').toLowerCase().includes(q) ||
+      (r.Category || '').toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
   const totalSpent = useMemo(() =>
-    (Array.isArray(rows) ? rows : []).reduce((s, r) => s + Number(r.Actual_EGP || 0), 0),
-  [rows]);
+    filtered.reduce((s, r) => s + Number(r.Actual_EGP || 0), 0),
+  [filtered]);
 
   const chartData = useMemo(() => {
     const map = {};
-    (Array.isArray(rows) ? rows : []).forEach((r) => {
+    rows.forEach((r) => {
       const cat = r.Category || 'Other';
       if (!map[cat]) map[cat] = { category: cat, actual: 0 };
       map[cat].actual += Number(r.Actual_EGP || 0);
@@ -68,38 +75,30 @@ export default function Expenses() {
     load();
   }
 
-  const fmt = (n) => `${Number(n).toLocaleString('en-EG')} EGP`;
-
   const columns = [
-    { key: 'Date', label: t('sessions.date'), sortable: true,
+    { key: 'Date',         label: t('sessions.date'),      sortable: true,
       render: (r) => <span>{String(r.Date || '').substring(0, 10)}</span> },
-    { key: 'Category',    label: t('expenses.category'),    sortable: true },
-    { key: 'Sub_Category',label: t('expenses.subCategory'), sortable: true },
-    { key: 'Item',        label: t('expenses.item') },
-    { key: 'Actual_EGP', label: t('expenses.amount'),
+    { key: 'Category',     label: t('expenses.category'),    sortable: true },
+    { key: 'Sub_Category', label: t('expenses.subCategory'), sortable: true },
+    { key: 'Item',         label: t('expenses.item') },
+    { key: 'Actual_EGP',  label: t('expenses.amount'),
       render: (r) => <span dir="ltr">{fmt(r.Actual_EGP)}</span> },
-    { key: 'Paid_By',    label: t('expenses.paidBy') },
-    { key: 'Notes',      label: 'Notes' },
+    { key: 'Paid_By',     label: t('expenses.paidBy') },
+    { key: 'Notes',       label: 'Notes' },
     {
       key: '_actions', label: '',
       render: (r) => (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setEditingRow(r); }}
-            style={{ fontSize: '12px', color: '#0E9B73', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
-          >
+        <div className="flex gap-1 flex-nowrap">
+          <button onClick={(e) => { e.stopPropagation(); setEditingRow(r); }}
+            className="text-xs text-primary bg-transparent border-none cursor-pointer px-1.5 py-0.5">
             ✏️ {t('general.edit')}
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setDuplicatingRow(r); setAddOpen(true); }}
-            style={{ fontSize: '12px', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', whiteSpace: 'nowrap' }}
-          >
+          <button onClick={(e) => { e.stopPropagation(); setDuplicating(r); setAddOpen(true); }}
+            className="text-xs text-indigo-500 bg-transparent border-none cursor-pointer px-1.5 py-0.5 whitespace-nowrap">
             📋 {t('expenses.newFromThis') || 'New'}
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }}
-            style={{ fontSize: '12px', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
-          >
+          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }}
+            className="text-xs text-danger bg-transparent border-none cursor-pointer px-1.5 py-0.5">
             🗑️
           </button>
         </div>
@@ -109,26 +108,31 @@ export default function Expenses() {
 
   return (
     <div className="flex flex-col gap-4">
-      <OfflineBanner />
-      <div className="flex flex-wrap gap-2 items-end">
-        <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
-          options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
-        <FilterSelect value={year} onChange={setYear} label=""
-          options={YEARS.map((y) => ({ id: String(y), label: y }))} />
-        <Button size="sm" color="primary" onPress={() => { setDuplicatingRow(null); setAddOpen(true); }}>+ {t('expenses.addExpense')}</Button>
-        <Button size="sm" variant="flat" onPress={() => buildExpensesExcel(rows, month, year)}>{t('expenses.export')}</Button>
-      </div>
+      {actionsTarget && createPortal(
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="flat" onPress={() => buildExpensesExcel(rows, month, year)}>
+            ↓ {t('expenses.export')}
+          </Button>
+          <Button size="sm" color="primary" onPress={() => { setDuplicating(null); setAddOpen(true); }}>
+            + {t('expenses.addExpense')}
+          </Button>
+        </div>,
+        actionsTarget
+      )}
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="bg-default-50 rounded-xl px-3 py-2">
-          <p className="text-default-400 text-xs">{t('expenses.actual')}</p>
-          <p dir="ltr" className="font-semibold text-default-800">{fmt(totalSpent)}</p>
-        </div>
-        <div className="bg-default-50 rounded-xl px-3 py-2">
-          <p className="text-default-400 text-xs">{t('expenses.expenseLog')}</p>
-          <p dir="ltr" className="font-semibold text-default-800">{rows.length} items</p>
-        </div>
-      </div>
+      <OfflineBanner />
+
+      <PageFilterBar right={<SearchInput value={search} onChange={setSearch} />}>
+        <FilterSelect value={month} onChange={setMonth}
+          options={MONTHS.map((m) => ({ id: String(m), label: MONTH_NAMES[m - 1] }))} />
+        <FilterSelect value={year} onChange={setYear}
+          options={YEARS.map((y) => ({ id: String(y), label: y }))} />
+      </PageFilterBar>
+
+      <KpiCard metrics={[
+        { label: t('expenses.actual'),     value: fmt(totalSpent) },
+        { label: t('expenses.expenseLog'), value: `${filtered.length} items` },
+      ]} />
 
       <Card className="leen-card">
         <Card.Content className="p-4 gap-2">
@@ -137,22 +141,20 @@ export default function Expenses() {
         </Card.Content>
       </Card>
 
-      <DataTable columns={columns} data={rows} loading={loading} emptyMessage={t('general.noResults')} />
+      <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
 
       <AddExpenseModal
         isOpen={addOpen}
         initialData={duplicatingRow}
-        onClose={() => { setAddOpen(false); setDuplicatingRow(null); }}
-        onSuccess={() => { setAddOpen(false); setDuplicatingRow(null); load(); }}
+        onClose={() => { setAddOpen(false); setDuplicating(null); }}
+        onSuccess={() => { setAddOpen(false); setDuplicating(null); load(); }}
       />
-
       <EditExpenseModal
         expense={editingRow}
         isOpen={!!editingRow}
         onClose={() => setEditingRow(null)}
         onSuccess={() => { setEditingRow(null); load(); }}
       />
-
       <ConfirmModal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}

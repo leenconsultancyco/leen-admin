@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@heroui/react';
 import { getTransactions } from '../api';
 import { buildTransactionsExcel } from '../utils/excel';
@@ -6,35 +7,34 @@ import { useI18n } from '../i18n';
 import DataTable from '../components/DataTable';
 import AddTransactionModal from '../components/AddTransactionModal';
 import OfflineBanner from '../components/OfflineBanner';
+import PageFilterBar, { FilterSelect, SearchInput } from '../components/PageFilterBar';
+import KpiCard from '../components/KpiCard';
 
-const NOW    = new Date();
-const YEARS  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+const NOW        = new Date();
+const YEARS      = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
+const MONTHS     = Array.from({ length: 12 }, (_, i) => i + 1);
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function FilterSelect({ label, value, onChange, options }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      {label && <span className="text-xs text-default-500">{label}</span>}
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none">
-        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
-      </select>
-    </div>
-  );
+function fmtEGP(n) {
+  return `${Number(n).toLocaleString('en-EG')} EGP`;
 }
 
-function fmt(n, cls = '') {
+function CellAmt({ n, cls }) {
   if (!n && n !== 0) return <span className="text-default-300">—</span>;
-  return <span dir="ltr" className={cls}>{Number(n).toLocaleString('en-EG')} EGP</span>;
+  return <span dir="ltr" className={cls}>{fmtEGP(n)}</span>;
 }
 
 export default function CashFlow() {
   const { t } = useI18n();
   const [month, setMonth]     = useState(String(NOW.getMonth() + 1));
   const [year, setYear]       = useState(String(NOW.getFullYear()));
+  const [search, setSearch]   = useState('');
   const [rows, setRows]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [actionsTarget, setActionsTarget] = useState(null);
+
+  useEffect(() => { setActionsTarget(document.getElementById('page-title-actions')); }, []);
 
   const load = () => {
     setLoading(true);
@@ -47,10 +47,19 @@ export default function CashFlow() {
 
   useEffect(load, [month, year]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totals = useMemo(() => (Array.isArray(rows) ? rows : []).reduce((acc, r) => ({
+  const filtered = useMemo(() => {
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows.filter((r) =>
+      (r.Description || '').toLowerCase().includes(q) ||
+      (r.Category || '').toLowerCase().includes(q)
+    );
+  }, [rows, search]);
+
+  const totals = useMemo(() => filtered.reduce((acc, r) => ({
     in:  acc.in  + Number(r.Cash_In  || 0),
     out: acc.out + Number(r.Cash_Out || 0),
-  }), { in: 0, out: 0 }), [rows]);
+  }), { in: 0, out: 0 }), [filtered]);
 
   const net = totals.in - totals.out;
 
@@ -58,39 +67,46 @@ export default function CashFlow() {
     { key: 'Date',        label: t('cashflow.date'),        sortable: true },
     { key: 'Description', label: t('cashflow.description'), sortable: true },
     { key: 'Category',    label: t('cashflow.category') },
-    { key: 'Cash_In',     label: t('cashflow.cashIn'),  render: (r) => fmt(r.Cash_In,  'text-success font-medium') },
-    { key: 'Cash_Out',    label: t('cashflow.cashOut'), render: (r) => fmt(r.Cash_Out, 'text-danger  font-medium') },
-    { key: 'Balance',     label: t('cashflow.balance'), render: (r) => fmt(r.Balance, 'font-semibold') },
+    { key: 'Cash_In',     label: t('cashflow.cashIn'),  render: (r) => <CellAmt n={r.Cash_In}  cls="text-success font-medium" /> },
+    { key: 'Cash_Out',    label: t('cashflow.cashOut'), render: (r) => <CellAmt n={r.Cash_Out} cls="text-danger font-medium" /> },
+    { key: 'Balance',     label: t('cashflow.balance'), render: (r) => <CellAmt n={r.Balance}  cls="font-semibold" /> },
     { key: 'Method',      label: t('cashflow.method') },
     { key: 'Notes',       label: 'Notes' },
   ];
 
+  const kpiMetrics = [
+    { label: t('cashflow.totalIn'),  value: fmtEGP(totals.in),  cls: 'text-success' },
+    { label: t('cashflow.totalOut'), value: fmtEGP(totals.out), cls: 'text-danger'  },
+    { label: t('cashflow.net'),      value: fmtEGP(net),        cls: net >= 0 ? 'text-primary' : 'text-danger' },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
+      {actionsTarget && createPortal(
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="flat" onPress={() => buildTransactionsExcel(rows, month, year)}>
+            ↓ {t('cashflow.export')}
+          </Button>
+          <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>
+            + {t('cashflow.addManualEntry')}
+          </Button>
+        </div>,
+        actionsTarget
+      )}
+
       <OfflineBanner />
-      <div className="flex flex-wrap gap-2 items-end">
-        <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
-          options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
-        <FilterSelect value={year} onChange={setYear} label=""
+
+      <PageFilterBar right={<SearchInput value={search} onChange={setSearch} />}>
+        <FilterSelect value={month} onChange={setMonth}
+          options={MONTHS.map((m) => ({ id: String(m), label: MONTH_NAMES[m - 1] }))} />
+        <FilterSelect value={year} onChange={setYear}
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
-        <Button size="sm" color="primary" onPress={() => setAddOpen(true)}>{t('cashflow.addManualEntry')}</Button>
-        <Button size="sm" variant="flat" onPress={() => buildTransactionsExcel(rows, month, year)}>{t('cashflow.export')}</Button>
-      </div>
+      </PageFilterBar>
 
-      <div className="grid grid-cols-3 gap-2 text-sm">
-        {[
-          { label: t('cashflow.totalIn'),  val: totals.in,  cls: 'text-success' },
-          { label: t('cashflow.totalOut'), val: totals.out, cls: 'text-danger'  },
-          { label: t('cashflow.net'),      val: net,        cls: net >= 0 ? 'text-primary' : 'text-danger' },
-        ].map(({ label, val, cls }) => (
-          <div key={label} className="bg-default-50 rounded-xl px-3 py-2">
-            <p className="text-default-400 text-xs">{label}</p>
-            <p dir="ltr" className={`font-semibold ${cls}`}>{Number(val).toLocaleString('en-EG')} EGP</p>
-          </div>
-        ))}
-      </div>
+      <KpiCard metrics={kpiMetrics} />
 
-      <DataTable columns={columns} data={rows} loading={loading} emptyMessage={t('general.noResults')} />
+      <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
+
       <AddTransactionModal isOpen={addOpen} onClose={() => setAddOpen(false)} onSuccess={load} />
     </div>
   );

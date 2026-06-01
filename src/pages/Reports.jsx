@@ -1,39 +1,31 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Card, Spinner } from '@heroui/react';
 import { getDashboardData, getSessions, getExpenses, getPayouts, getTransactions } from '../api';
 import { exportSessionsExcel, exportExpensesExcel, exportPayoutsExcel, exportTransactionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
 import RevenueChart from '../components/RevenueChart';
 import IncomeStatement from '../components/IncomeStatement';
+import PageFilterBar, { FilterSelect } from '../components/PageFilterBar';
 
-const NOW        = new Date();
-const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const YEARS      = [NOW.getFullYear() - 1, NOW.getFullYear()];
-const MONTHS     = Array.from({ length: 12 }, (_, i) => i + 1);
-
-function FilterSelect({ label, value, onChange, options }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      {label && <span className="text-xs text-default-500">{label}</span>}
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none">
-        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
-      </select>
-    </div>
-  );
-}
+const NOW         = new Date();
+const MONTH_ABBR  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEARS       = [NOW.getFullYear() - 1, NOW.getFullYear()];
+const MONTHS      = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export default function Reports() {
   const { t } = useI18n();
-  const [month, setMonth] = useState(String(NOW.getMonth() + 1));
-  const [year, setYear]   = useState(String(NOW.getFullYear()));
-
+  const [month, setMonth]       = useState(String(NOW.getMonth() + 1));
+  const [year, setYear]         = useState(String(NOW.getFullYear()));
   const [dash, setDash]         = useState(null);
   const [sessions, setSessions] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [ytd, setYtd]           = useState([]);
   const [loading, setLoading]   = useState(true);
   const [exporting, setExporting] = useState({});
+  const [actionsTarget, setActionsTarget] = useState(null);
+
+  useEffect(() => { setActionsTarget(document.getElementById('page-title-actions')); }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -55,7 +47,7 @@ export default function Reports() {
     Promise.all(
       Array.from({ length: lastMonth }, (_, i) =>
         getDashboardData(i + 1, yr).then((r) => ({
-          month: MONTH_ABBR[i],
+          month:    MONTH_ABBR[i],
           revenue:  Number(r.data?.totalRevenue  || 0),
           expenses: Number(r.data?.totalExpenses || 0),
         }))
@@ -82,18 +74,31 @@ export default function Reports() {
   const EXPORTS = [
     { key: 'sessions',     label: t('reports.exportSessions') },
     { key: 'expenses',     label: t('reports.exportExpenses') },
-    { key: 'payouts',      label: t('reports.exportPayouts') },
-    { key: 'transactions', label: t('cashflow.export') },
+    { key: 'payouts',      label: t('reports.exportPayouts')  },
+    { key: 'transactions', label: t('cashflow.export')        },
   ];
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex gap-2">
-        <FilterSelect value={month} onChange={setMonth} label={t('reports.selectMonth')}
-          options={MONTHS.map((m) => ({ id: String(m), label: m }))} />
-        <FilterSelect value={year} onChange={setYear} label=""
+      {actionsTarget && createPortal(
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {EXPORTS.map(({ key, label }) => (
+            <Button key={key} size="sm" variant="flat" isDisabled={!!exporting[key]}
+              startContent={exporting[key] ? <Spinner size="sm" /> : undefined}
+              onPress={() => runExport(key)}>
+              {exporting[key] ? t('reports.generating') : `↓ ${label}`}
+            </Button>
+          ))}
+        </div>,
+        actionsTarget
+      )}
+
+      <PageFilterBar>
+        <FilterSelect value={month} onChange={setMonth}
+          options={MONTHS.map((m) => ({ id: String(m), label: MONTH_ABBR[m - 1] }))} />
+        <FilterSelect value={year} onChange={setYear}
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
-      </div>
+      </PageFilterBar>
 
       <IncomeStatement dashData={dash} sessions={sessions} expenses={expenses} loading={loading} />
 
@@ -103,16 +108,6 @@ export default function Reports() {
           <RevenueChart data={ytd} loading={loading} />
         </Card.Content>
       </Card>
-
-      <div className="flex flex-wrap gap-2">
-        {EXPORTS.map(({ key, label }) => (
-          <Button key={key} size="sm" variant="flat" isDisabled={!!exporting[key]}
-            startContent={exporting[key] ? <Spinner size="sm" /> : undefined}
-            onPress={() => runExport(key)}>
-            {exporting[key] ? t('reports.generating') : label}
-          </Button>
-        ))}
-      </div>
     </div>
   );
 }

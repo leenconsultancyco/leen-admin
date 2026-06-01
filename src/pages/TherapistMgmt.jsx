@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, Button, Chip, Skeleton } from '@heroui/react';
 import { getTherapistsFull, updateTherapist } from '../api';
 import { useI18n } from '../i18n';
 import TherapistEditModal from '../components/TherapistEditModal';
+import PageFilterBar, { SearchInput } from '../components/PageFilterBar';
+import KpiCard from '../components/KpiCard';
 
 const BLANK_THERAPIST = {
   Therapist_ID: '', Name_EN: '', Name_AR: '',
@@ -16,18 +19,14 @@ const BLANK_THERAPIST = {
   Photo_URL: '', Display_Order: '', Active: true,
 };
 
-function Avatar({ therapist }) {
+function TherapistAvatar({ therapist }) {
   if (therapist.Photo_URL) {
     return <img src={therapist.Photo_URL} alt={therapist.Name_EN}
-      style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />;
+      className="w-12 h-12 rounded-full object-cover shrink-0" />;
   }
   const letters = (therapist.Name_EN || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
-    <div style={{
-      width: 48, height: 48, borderRadius: '50%', backgroundColor: '#0E9B73',
-      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 14, fontWeight: 700, flexShrink: 0,
-    }}>
+    <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold shrink-0">
       {letters}
     </div>
   );
@@ -35,12 +34,15 @@ function Avatar({ therapist }) {
 
 export default function TherapistMgmt() {
   const { t } = useI18n();
-  const [therapists, setTherapists] = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState('all');
-  const [editing, setEditing]       = useState(null);
-  const [adding, setAdding]         = useState(false);
+  const [therapists, setTherapists]   = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [search, setSearch]           = useState('');
+  const [filter, setFilter]           = useState('all');
+  const [editing, setEditing]         = useState(null);
+  const [adding, setAdding]           = useState(false);
+  const [actionsTarget, setActionsTarget] = useState(null);
+
+  useEffect(() => { setActionsTarget(document.getElementById('page-title-actions')); }, []);
 
   const load = () => {
     setLoading(true);
@@ -57,49 +59,60 @@ export default function TherapistMgmt() {
     load();
   }
 
-  const filtered = (Array.isArray(therapists) ? therapists : []).filter((th) => {
-    if (filter === 'active'   &&  !th.Active) return false;
-    if (filter === 'inactive' && !!th.Active) return false;
-    const q = search.toLowerCase();
-    return !q || th.Name_EN?.toLowerCase().includes(q) || th.Name_AR?.includes(q);
-  });
+  const filtered = useMemo(() => {
+    const safe = Array.isArray(therapists) ? therapists : [];
+    return safe.filter((th) => {
+      if (filter === 'active'   && !th.Active)  return false;
+      if (filter === 'inactive' && !!th.Active) return false;
+      const q = search.toLowerCase();
+      return !q || th.Name_EN?.toLowerCase().includes(q) || th.Name_AR?.includes(q);
+    });
+  }, [therapists, filter, search]);
+
+  const counts = useMemo(() => {
+    const safe = Array.isArray(therapists) ? therapists : [];
+    return { total: safe.length, active: safe.filter((th) => th.Active).length, inactive: safe.filter((th) => !th.Active).length };
+  }, [therapists]);
+
+  const FILTERS = [
+    { id: 'all',      label: t('general.all') || 'All'           },
+    { id: 'active',   label: t('therapistMgmt.active') || 'Active'   },
+    { id: 'inactive', label: t('therapistMgmt.inactive') || 'Inactive' },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          placeholder={t('clients.search')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            flex: 1, minWidth: '180px', maxWidth: '280px',
-            borderWidth: '2px', borderStyle: 'solid', borderColor: '#d1d5db',
-            borderRadius: '8px', padding: '7px 14px', fontSize: '14px',
-            backgroundColor: '#fff', color: '#111827', boxSizing: 'border-box',
-            outline: 'none',
-          }}
-        />
-        {['all', 'active', 'inactive'].map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            style={{
-              padding: '5px 14px', borderRadius: '9999px', fontSize: '12px',
-              border: `2px solid ${filter === f ? '#0E9B73' : '#d1d5db'}`,
-              backgroundColor: filter === f ? '#0E9B73' : '#ffffff',
-              color: filter === f ? '#ffffff' : '#4b5563',
-              cursor: 'pointer', fontWeight: filter === f ? '600' : '400',
-            }}
-          >
-            {f === 'all' ? (t('general.all') || 'All') : f === 'active' ? (t('therapistMgmt.active') || 'Active') : (t('therapistMgmt.inactive') || 'Inactive')}
-          </button>
-        ))}
+      {actionsTarget && createPortal(
         <Button size="sm" color="primary" onPress={() => setAdding(true)}>
           + {t('therapistMgmt.addTherapist') || 'Add Therapist'}
-        </Button>
-      </div>
+        </Button>,
+        actionsTarget
+      )}
+
+      <PageFilterBar right={<SearchInput value={search} onChange={setSearch} />}>
+        {/* Active / Inactive pill filter */}
+        <div className="flex gap-1.5">
+          {FILTERS.map(({ id, label }) => (
+            <button
+              key={id}
+              onClick={() => setFilter(id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                filter === id
+                  ? 'bg-primary border-primary text-white shadow-sm'
+                  : 'bg-white border-default-200 text-default-500 hover:border-primary hover:text-primary'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </PageFilterBar>
+
+      <KpiCard metrics={[
+        { label: t('therapistMgmt.total')    || 'Total Therapists', value: String(counts.total) },
+        { label: t('therapistMgmt.active')   || 'Active',           value: String(counts.active),   cls: 'text-success' },
+        { label: t('therapistMgmt.inactive') || 'Inactive',         value: String(counts.inactive), cls: 'text-default-400' },
+      ]} />
 
       {loading ? (
         <div className="flex flex-col gap-3">
@@ -112,7 +125,7 @@ export default function TherapistMgmt() {
           {filtered.map((th) => (
             <Card key={th.Therapist_ID} className="leen-card" style={{ opacity: th.Active ? 1 : 0.6 }}>
               <Card.Content className="flex flex-row items-center gap-4 p-4">
-                <Avatar therapist={th} />
+                <TherapistAvatar therapist={th} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-default-800 truncate">{th.Name_EN}</p>
@@ -123,20 +136,17 @@ export default function TherapistMgmt() {
                   <p className="text-xs text-default-400 truncate">{th.Name_AR}</p>
                   <p className="text-xs text-default-500 mt-0.5">{th.Title_EN}</p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                <div className="flex flex-col gap-1.5 items-end shrink-0">
                   <Button size="sm" variant="flat" onPress={() => setEditing(th)}>
                     {t('general.edit')}
                   </Button>
                   <button
-                    type="button"
                     onClick={() => handleToggleActive(th)}
-                    style={{
-                      padding: '3px 10px', borderRadius: '9999px', fontSize: '11px',
-                      border: `1.5px solid ${th.Active ? '#f87171' : '#0E9B73'}`,
-                      backgroundColor: 'transparent',
-                      color: th.Active ? '#ef4444' : '#0E9B73',
-                      cursor: 'pointer', fontWeight: '600', whiteSpace: 'nowrap',
-                    }}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border cursor-pointer transition-colors ${
+                      th.Active
+                        ? 'border-danger text-danger hover:bg-danger hover:text-white'
+                        : 'border-primary text-primary hover:bg-primary hover:text-white'
+                    }`}
                   >
                     {th.Active ? (t('therapistMgmt.deactivate') || 'Deactivate') : (t('therapistMgmt.reactivate') || 'Reactivate')}
                   </button>
@@ -147,23 +157,16 @@ export default function TherapistMgmt() {
         </div>
       )}
 
-      {/* Edit existing therapist */}
       {editing && (
         <TherapistEditModal
-          therapist={editing}
-          isNew={false}
-          isOpen={!!editing}
+          therapist={editing} isNew={false} isOpen={!!editing}
           onClose={() => setEditing(null)}
           onSuccess={() => { setEditing(null); load(); }}
         />
       )}
-
-      {/* Add new therapist */}
       {adding && (
         <TherapistEditModal
-          therapist={BLANK_THERAPIST}
-          isNew={true}
-          isOpen={adding}
+          therapist={BLANK_THERAPIST} isNew={true} isOpen={adding}
           onClose={() => setAdding(false)}
           onSuccess={() => { setAdding(false); load(); }}
         />
