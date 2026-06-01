@@ -188,25 +188,23 @@ export default function Sessions() {
           <div className="ms-auto flex items-center gap-2 flex-wrap">
             <SearchInput value={search} onChange={setSearch} />
 
-            {/* Table / Calendar toggle — solid colored buttons */}
+            {/* Table / Calendar toggle — solid blue when active */}
             <div className="flex gap-1.5">
               <button
                 onClick={() => setView('table')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                  view === 'table'
-                    ? 'bg-primary border-primary text-white shadow-sm'
-                    : 'bg-white border-default-200 text-default-500 hover:border-primary hover:text-primary'
-                }`}
+                style={view === 'table'
+                  ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+                  : { backgroundColor: '#ffffff', borderColor: '#e4e4e7', color: '#71717a' }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:border-blue-500"
               >
                 ≡ {t('sessions.tableView')}
               </button>
               <button
                 onClick={() => setView('calendar')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                  view === 'calendar'
-                    ? 'bg-primary border-primary text-white shadow-sm'
-                    : 'bg-white border-default-200 text-default-500 hover:border-primary hover:text-primary'
-                }`}
+                style={view === 'calendar'
+                  ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+                  : { backgroundColor: '#ffffff', borderColor: '#e4e4e7', color: '#71717a' }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:border-blue-500"
               >
                 ⊞ {t('sessions.calendarView')}
               </button>
@@ -239,7 +237,7 @@ export default function Sessions() {
       {view === 'table' ? (
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />
       ) : (
-        <div className="leen-card rounded-2xl bg-white shadow-sm overflow-hidden p-4">
+        <div className="leen-card rounded-2xl bg-gray-50 shadow-sm overflow-hidden p-4">
           <SessionCalendarView
             key={`cal-${month}-${year}-${therapistId}`}
             sessions={sessions}
