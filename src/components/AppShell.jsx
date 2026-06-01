@@ -59,14 +59,13 @@ export default function AppShell({ children, title = '', pendingCount: initialCo
         {/* Page title ribbon */}
         {title && (
           <div className="-mx-4 md:-mx-7 -mt-4 md:mt-0 mb-5 md:mb-7 border-b border-default-200 bg-white">
-            <h1
-              className="px-4 md:px-7 pt-4 md:pt-6 pb-3 md:pb-5 text-xl md:text-2xl font-bold"
-              style={{ color: '#374151' }}
-            >
-              {title}
-            </h1>
-            {/* Pages can portal extra controls here via document.getElementById('page-title-extras') */}
-            <div id="page-title-extras" />
+            <div className="px-4 md:px-7 py-4 md:py-5 flex items-center justify-between gap-4">
+              <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#374151' }}>
+                {title}
+              </h1>
+              {/* Pages portal their action buttons here */}
+              <div id="page-title-actions" className="flex items-center gap-2 shrink-0" />
+            </div>
           </div>
         )}
         {children}

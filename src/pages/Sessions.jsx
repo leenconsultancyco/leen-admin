@@ -14,7 +14,8 @@ import SessionCalendarView from '../components/SessionCalendarView';
 
 const STATUSES = ['Pending', 'Confirmed', 'Completed', 'Cancelled', 'No-show'];
 const PAYMENTS = ['Unpaid', 'Paid'];
-const NOW      = new Date();
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const NOW = new Date();
 
 function to12h(t) {
   if (!t || String(t).includes('1899')) return '—';
@@ -28,17 +29,17 @@ function statusColor(s) {
   return { Confirmed: 'success', Pending: 'warning', Cancelled: 'danger', Completed: 'primary', 'No-show': 'default' }[s] || 'default';
 }
 
-function FilterSelect({ label, value, onChange, options }) {
+function FilterSelect({ value, onChange, options, placeholder }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      {label && <span className="text-xs text-default-500">{label}</span>}
+    <div className="relative">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border border-default-200 rounded-lg px-2 py-1.5 text-sm bg-white text-default-700 focus:outline-none"
+        className="appearance-none border border-default-200 rounded-lg ps-3 pe-7 py-2 text-sm bg-white text-default-700 cursor-pointer focus:outline-none focus:border-primary min-w-[120px]"
       >
-        {options.map(({ id, label: lbl }) => <option key={id} value={id}>{lbl}</option>)}
+        {options.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
       </select>
+      <span className="pointer-events-none absolute inset-y-0 end-2 flex items-center text-default-400 text-xs">▾</span>
     </div>
   );
 }
@@ -50,6 +51,7 @@ export default function Sessions() {
   const [therapistId, setTherapistId] = useState('');
   const [status, setStatus]           = useState('');
   const [payment, setPayment]         = useState('');
+  const [search, setSearch]           = useState('');
   const [sessions, setSessions]       = useState([]);
   const [therapists, setTherapists]   = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -58,18 +60,19 @@ export default function Sessions() {
   const [deletingSession, setDeleting]= useState(null);
   const [deleting, setDelBusy]        = useState(false);
   const [view, setView]               = useState('table');
-  const [portalTarget, setPortalTarget] = useState(null);
+  const [actionsTarget, setActionsTarget] = useState(null);
 
-  const years  = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
+  const years = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  // Grab the portal slot once AppShell's title ribbon is in the DOM
   useEffect(() => {
-    setPortalTarget(document.getElementById('page-title-extras'));
+    setActionsTarget(document.getElementById('page-title-actions'));
   }, []);
 
   useEffect(() => {
-    getTherapistsFull().then((r) => { setTherapists(r.success && Array.isArray(r.data) ? r.data : []); });
+    getTherapistsFull().then((r) => {
+      setTherapists(r.success && Array.isArray(r.data) ? r.data : []);
+    });
   }, []);
 
   const load = () => {
@@ -80,9 +83,21 @@ export default function Sessions() {
 
   useEffect(load, [month, year, therapistId, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filtered = (Array.isArray(sessions) ? sessions : []).filter((s) => !payment || s.Payment_Status === payment);
+  const filtered = useMemo(() => {
+    let rows = Array.isArray(sessions) ? sessions : [];
+    if (payment) rows = rows.filter((s) => s.Payment_Status === payment);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      rows = rows.filter((s) =>
+        (s.Client_Name || '').toLowerCase().includes(q) ||
+        (s.Therapist_Name || '').toLowerCase().includes(q) ||
+        (s.Booking_ID || '').toLowerCase().includes(q)
+      );
+    }
+    return rows;
+  }, [sessions, payment, search]);
 
-  const totals = useMemo(() => (Array.isArray(filtered) ? filtered : []).reduce((acc, s) => ({
+  const totals = useMemo(() => filtered.reduce((acc, s) => ({
     sessions: acc.sessions + 1,
     revenue:  acc.revenue   + Number(s.Fee || 0),
     therapist:acc.therapist + Number(s.Revenue_Therapist || 0),
@@ -114,8 +129,7 @@ export default function Sessions() {
     { key: 'Client_Name',       label: t('sessions.client'),        sortable: true },
     { key: 'Therapist_Name',    label: t('sessions.therapist'),     sortable: true },
     { key: 'Session_Date',      label: t('sessions.date'),          sortable: true },
-    { key: 'Session_Time',      label: t('sessions.time'),
-      render: (r) => <span>{to12h(r.Session_Time)}</span> },
+    { key: 'Session_Time',      label: t('sessions.time'),          render: (r) => <span>{to12h(r.Session_Time)}</span> },
     { key: 'Session_Type',      label: t('sessions.type') },
     { key: 'Session_Mode',      label: t('sessions.mode') },
     { key: 'Fee',               label: t('sessions.fee'),           render: (r) => <span dir="ltr">{fmt(r.Fee)}</span> },
@@ -147,61 +161,87 @@ export default function Sessions() {
     },
   ];
 
-  // Controls rendered into the AppShell title ribbon via portal
-  const filterBar = (
-    <div className="px-4 md:px-7 pb-3 border-t border-default-100 flex flex-wrap items-end gap-2">
-      <FilterSelect value={month} onChange={setMonth} label={t('sessions.date')}
-        options={months.map((m) => ({ id: String(m), label: m }))} />
-      <FilterSelect value={year} onChange={setYear} label=""
-        options={years.map((y) => ({ id: String(y), label: y }))} />
-      <FilterSelect value={therapistId} onChange={setTherapistId} label={t('sessions.filterByTherapist')}
-        options={[{ id: '', label: t('sessions.allSessions') }, ...therapists.map((th) => ({ id: th.Therapist_ID, label: th.Name_EN }))]} />
-      <FilterSelect value={status} onChange={setStatus} label={t('sessions.filterByStatus')}
-        options={[{ id: '', label: t('sessions.allSessions') }, ...STATUSES.map((s) => ({ id: s, label: s }))]} />
-      <FilterSelect value={payment} onChange={setPayment} label={t('sessions.payment')}
-        options={[{ id: '', label: 'All' }, ...PAYMENTS.map((p) => ({ id: p, label: p }))]} />
-      <div className="flex items-end gap-2 ms-auto flex-wrap">
-        <Button size="sm" variant="flat" onPress={() => buildSessionsExcel(filtered, month, year)}>
-          {t('sessions.export')}
-        </Button>
-        <Button size="sm" color="primary" onPress={() => setAdding(true)}>
-          + {t('sessions.addSession') || 'Add Session'}
-        </Button>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setView('table')}
-            className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors"
-            style={{
-              border: `1.5px solid ${view === 'table' ? '#0E9B73' : '#d1d5db'}`,
-              backgroundColor: view === 'table' ? '#0E9B73' : '#fff',
-              color: view === 'table' ? '#fff' : '#6b7280',
-              fontWeight: view === 'table' ? 600 : 400,
-            }}
-          >
-            ≡ {t('sessions.tableView')}
-          </button>
-          <button
-            onClick={() => setView('calendar')}
-            className="px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors"
-            style={{
-              border: `1.5px solid ${view === 'calendar' ? '#0E9B73' : '#d1d5db'}`,
-              backgroundColor: view === 'calendar' ? '#0E9B73' : '#fff',
-              color: view === 'calendar' ? '#fff' : '#6b7280',
-              fontWeight: view === 'calendar' ? 600 : 400,
-            }}
-          >
-            ⊞ {t('sessions.calendarView')}
-          </button>
-        </div>
-      </div>
+  // Portaled into AppShell title ribbon — Export + Add Session only
+  const titleActions = (
+    <div className="flex items-center gap-2">
+      <Button size="sm" variant="flat" onPress={() => buildSessionsExcel(filtered, month, year)}>
+        ↓ {t('sessions.export')}
+      </Button>
+      <Button size="sm" color="primary" onPress={() => setAdding(true)}>
+        + {t('sessions.addSession') || 'Add Session'}
+      </Button>
     </div>
   );
 
   return (
     <div className="flex flex-col gap-4">
-      {portalTarget && createPortal(filterBar, portalTarget)}
+      {actionsTarget && createPortal(titleActions, actionsTarget)}
 
       <OfflineBanner />
+
+      {/* Filter card */}
+      <div className="rounded-2xl border border-default-200 bg-white shadow-sm px-4 py-3">
+        <div className="flex items-center gap-3 flex-wrap">
+
+          {/* Filter funnel icon */}
+          <svg className="text-default-400 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+
+          <FilterSelect value={therapistId} onChange={setTherapistId}
+            options={[{ id: '', label: t('sessions.allTherapists') || 'All therapists' }, ...therapists.map((th) => ({ id: th.Therapist_ID, label: th.Name_EN }))]} />
+
+          <FilterSelect value={status} onChange={setStatus}
+            options={[{ id: '', label: 'All statuses' }, ...STATUSES.map((s) => ({ id: s, label: s }))]} />
+
+          <FilterSelect value={payment} onChange={setPayment}
+            options={[{ id: '', label: 'All payments' }, ...PAYMENTS.map((p) => ({ id: p, label: p }))]} />
+
+          {/* Month + Year combined visually */}
+          <div className="flex gap-1">
+            <FilterSelect value={month} onChange={setMonth}
+              options={months.map((m) => ({ id: String(m), label: MONTH_NAMES[m - 1] }))} />
+            <FilterSelect value={year} onChange={setYear}
+              options={years.map((y) => ({ id: String(y), label: y }))} />
+          </div>
+
+          {/* Search + view toggle pushed to the right */}
+          <div className="ms-auto flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <svg className="absolute start-2.5 top-1/2 -translate-y-1/2 text-default-400 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="border border-default-200 rounded-lg ps-8 pe-3 py-2 text-sm bg-white text-default-700 focus:outline-none focus:border-primary w-44"
+              />
+            </div>
+
+            {/* Segmented table / calendar toggle */}
+            <div className="flex bg-default-100 rounded-lg p-0.5 gap-0.5">
+              <button
+                onClick={() => setView('table')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  view === 'table' ? 'bg-white text-primary shadow-sm' : 'text-default-500 hover:text-default-700'
+                }`}
+              >
+                ≡ {t('sessions.tableView')}
+              </button>
+              <button
+                onClick={() => setView('calendar')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  view === 'calendar' ? 'bg-white text-primary shadow-sm' : 'text-default-500 hover:text-default-700'
+                }`}
+              >
+                ⊞ {t('sessions.calendarView')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Totals — single centered card */}
       <div className="flex justify-center">
