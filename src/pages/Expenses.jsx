@@ -11,17 +11,17 @@ import EditExpenseModal from '../components/EditExpenseModal';
 import ConfirmModal from '../components/ConfirmModal';
 import OfflineBanner from '../components/OfflineBanner';
 import PageFilterBar, { FilterSelect, SearchInput } from '../components/PageFilterBar';
-import KpiCard from '../components/KpiCard';
 
-const NOW         = new Date();
-const YEARS       = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
-const MONTHS      = Array.from({ length: 12 }, (_, i) => i + 1);
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const NOW          = new Date();
+const YEARS        = [NOW.getFullYear() - 1, NOW.getFullYear(), NOW.getFullYear() + 1];
+const MONTHS       = Array.from({ length: 12 }, (_, i) => i + 1);
+const MONTH_NAMES  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_NAMES_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
 const fmt = (n) => `${Number(n).toLocaleString('en-EG')} EGP`;
 
 export default function Expenses() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [month, setMonth]               = useState(String(NOW.getMonth() + 1));
   const [year, setYear]                 = useState(String(NOW.getFullYear()));
   const [search, setSearch]             = useState('');
@@ -129,10 +129,51 @@ export default function Expenses() {
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
       </PageFilterBar>
 
-      <KpiCard metrics={[
-        { label: t('expenses.actual'),     value: fmt(totalSpent) },
-        { label: t('expenses.expenseLog'), value: `${filtered.length} items` },
-      ]} />
+      {/* Header row — eyebrow + title left, total expenses mini-card right */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 600, color: '#5A6478', textTransform: 'uppercase', letterSpacing: '.04em', margin: 0 }}>
+            {lang === 'ar'
+              ? `${MONTH_NAMES_AR[Number(month) - 1]} ${year}`
+              : `${MONTH_NAMES[Number(month) - 1].toUpperCase()} ${year}`}
+          </p>
+          <p style={{ fontSize: 18, fontWeight: 700, color: '#0B1320', marginTop: 4, marginBottom: 0 }}>
+            {t('nav.expenses')}
+          </p>
+        </div>
+
+        <div className="leen-card" style={{
+          background: '#fff',
+          border: '1px solid #E6EAF1',
+          borderRadius: 16,
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: '#FFF3E6',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div>
+            <p style={{ fontSize: 11, color: '#5A6478', margin: 0 }}>
+              {t('expenses.actual')} · {MONTH_NAMES[Number(month) - 1]}
+            </p>
+            <p dir="ltr" style={{ fontSize: 20, fontWeight: 800, color: '#0B1320', margin: 0 }}>
+              {fmt(totalSpent)}
+            </p>
+          </div>
+        </div>
+      </div>
 
       <Card className="leen-card">
         <Card.Content className="p-4 gap-2">

@@ -8,7 +8,6 @@ import ClientDetailModal from '../components/ClientDetailModal';
 import AddClientModal from '../components/AddClientModal';
 import OfflineBanner from '../components/OfflineBanner';
 import PageFilterBar, { SearchInput } from '../components/PageFilterBar';
-import KpiCard from '../components/KpiCard';
 
 function useDebounce(value, ms = 300) {
   const [debounced, setDebounced] = useState(value);
@@ -49,11 +48,6 @@ export default function Clients() {
     return safe.filter((c) => c.Name?.toLowerCase().includes(q) || c.Phone?.includes(q));
   }, [clients, query]);
 
-  const counts = useMemo(() => {
-    const safe = Array.isArray(clients) ? clients : [];
-    return { total: safe.length, active: safe.filter((c) => c.Status === 'Active').length, inactive: safe.filter((c) => c.Status !== 'Active').length };
-  }, [clients]);
-
   const columns = [
     { key: 'Name',               label: t('clients.name'),         sortable: true },
     { key: 'Phone',              label: t('clients.phone') },
@@ -85,12 +79,6 @@ export default function Clients() {
       <OfflineBanner />
 
       <PageFilterBar right={<SearchInput value={search} onChange={setSearch} placeholder={t('clients.search')} />} />
-
-      <KpiCard metrics={[
-        { label: t('clients.total')    || 'Total Clients', value: String(counts.total) },
-        { label: t('clients.active'),                      value: String(counts.active),   cls: 'text-success'       },
-        { label: t('clients.inactive'),                    value: String(counts.inactive), cls: 'text-default-400'   },
-      ]} />
 
       <DataTable
         columns={columns}

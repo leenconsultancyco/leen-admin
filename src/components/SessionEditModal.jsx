@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Modal, Spinner, Tabs } from '@heroui/react';
 import { addBookingAdmin, editBooking, getAvailableSlots, addTransaction, deleteTransactionByBookingId } from '../api';
 import { toast } from './Toast';
@@ -171,6 +171,61 @@ async function syncCashFlowTransaction(original, form, therapists) {
   }
 }
 
+function ClientAutocomplete({ value, onChange, onSelect, clients }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const suggestions = useMemo(() => {
+    if (!value || !Array.isArray(clients)) return [];
+    const q = value.toLowerCase();
+    return clients.filter((c) => (c.Name || '').toLowerCase().includes(q)).slice(0, 8);
+  }, [value, clients]);
+
+  useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        style={F}
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% - 8px)', left: 0, right: 0, zIndex: 50,
+          background: '#fff', border: '2px solid #9ca3af', borderTop: 'none',
+          borderRadius: '0 0 8px 8px', maxHeight: 200, overflowY: 'auto',
+          boxShadow: '0 4px 12px rgba(0,0,0,.08)',
+        }}>
+          {suggestions.map((c) => (
+            <button
+              key={c.Client_ID}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onSelect(c); setOpen(false); }}
+              style={{
+                display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left',
+                padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                borderBottom: '1px solid #f3f4f6',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#f0fdf4'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+            >
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{c.Name}</span>
+              {c.Phone && <span style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{c.Phone}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function initForm(booking, isNew) {
   if (isNew) {
     return {
@@ -198,7 +253,7 @@ function initForm(booking, isNew) {
   };
 }
 
-export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSuccess, therapists, sessions }) {
+export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSuccess, therapists, sessions, clients }) {
   const [form, setForm]           = useState(() => initForm(booking, isNew));
   const [saving, setSaving]       = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -302,7 +357,12 @@ export default function SessionEditModal({ booking, isNew, isOpen, onClose, onSu
               <Tabs.Panel id="client">
                 <div style={PANEL}>
                   <Field label="Client Name *">
-                    <input value={form.Client_Name} onChange={(e) => set('Client_Name', e.target.value)} style={F} />
+                    <ClientAutocomplete
+                      value={form.Client_Name}
+                      onChange={(val) => set('Client_Name', val)}
+                      onSelect={(c) => setForm((f) => ({ ...f, Client_Name: c.Name, Client_Phone: c.Phone || f.Client_Phone, Client_Email: c.Email || f.Client_Email }))}
+                      clients={clients}
+                    />
                   </Field>
                   <Field label="Phone">
                     <input value={form.Client_Phone} onChange={(e) => set('Client_Phone', e.target.value)} style={F} />

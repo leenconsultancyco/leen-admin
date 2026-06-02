@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Chip, Card } from '@heroui/react';
-import { getSessions, getTherapistsFull, deleteBooking, deleteTransactionByBookingId } from '../api';
+import { getSessions, getTherapistsFull, getClients, deleteBooking, deleteTransactionByBookingId } from '../api';
 import { toast } from '../components/Toast';
 import { buildSessionsExcel } from '../utils/excel';
 import { useI18n } from '../i18n';
@@ -40,6 +40,7 @@ export default function Sessions() {
   const [search, setSearch]           = useState('');
   const [sessions, setSessions]       = useState([]);
   const [therapists, setTherapists]   = useState([]);
+  const [clients, setClients]         = useState([]);
   const [loading, setLoading]         = useState(true);
   const [adding, setAdding]           = useState(false);
   const [editingSession, setEditing]  = useState(null);
@@ -58,6 +59,9 @@ export default function Sessions() {
   useEffect(() => {
     getTherapistsFull().then((r) => {
       setTherapists(r.success && Array.isArray(r.data) ? r.data : []);
+    });
+    getClients().then((r) => {
+      setClients(r.success && Array.isArray(r.data) ? r.data : []);
     });
   }, []);
 
@@ -258,6 +262,7 @@ export default function Sessions() {
         onSuccess={() => { setAdding(false); load(); }}
         therapists={therapists}
         sessions={sessions}
+        clients={clients}
       />
 
       {editingSession && (
@@ -269,6 +274,7 @@ export default function Sessions() {
           onSuccess={() => { setEditing(null); load(); }}
           therapists={therapists}
           sessions={sessions}
+          clients={clients}
         />
       )}
 
