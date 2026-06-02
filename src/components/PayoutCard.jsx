@@ -10,7 +10,6 @@ const CARD_STYLE = {
   background: '#fff',
   border: '1px solid #E6EAF1',
   borderRadius: 22,
-  boxShadow: '0 1px 2px rgba(11,19,32,.04), 0 1px 3px rgba(11,19,32,.04)',
   padding: 20,
 };
 
@@ -89,7 +88,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
             <p style={{ fontSize: 11, color: '#5A6478', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '.03em', fontWeight: 600 }}>
               {t('payouts.totalPaid')}
             </p>
-            <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: '#8089A0', margin: 0, unicodeBidi: 'embed' }}>
+            <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: '#16A567', margin: 0, unicodeBidi: 'embed' }}>
               {fmt(totalPaid)}
             </p>
           </div>
@@ -97,7 +96,7 @@ export default function PayoutCard({ payout, month, year, onDone }) {
             <p style={{ fontSize: 11, color: '#5A6478', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '.03em', fontWeight: 600 }}>
               {t('payouts.pending')}
             </p>
-            <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: pending > 0 ? '#E69013' : '#16A567', margin: 0, unicodeBidi: 'embed' }}>
+            <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: pending > 0 ? '#E69013' : '#8089A0', margin: 0, unicodeBidi: 'embed' }}>
               {fmt(pending)}
             </p>
           </div>

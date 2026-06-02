@@ -81,11 +81,10 @@ export default function Payouts() {
           </p>
         </div>
 
-        <div style={{
+        <div className="leen-card" style={{
           background: '#fff',
           border: '1px solid #E6EAF1',
           borderRadius: 16,
-          boxShadow: '0 1px 2px rgba(11,19,32,.04), 0 1px 3px rgba(11,19,32,.04)',
           padding: '12px 18px',
           display: 'flex',
           alignItems: 'center',
