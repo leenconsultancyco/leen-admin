@@ -1,145 +1,207 @@
 import { useState, useMemo } from 'react';
-import { Card, Button, Chip, Separator, Spinner } from '@heroui/react';
+import { Spinner } from '@heroui/react';
 import { markPayoutPaid } from '../api';
 import { toast } from './Toast';
 import { useI18n } from '../i18n';
 import ConfirmModal from './ConfirmModal';
 
-function Initials({ name }) {
-  const letters = (name || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-  return (
-    <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shrink-0">
-      {letters}
-    </div>
-  );
-}
-
 const fmt = (n) => `${Number(n || 0).toLocaleString('en-EG')} EGP`;
+
+const CARD_STYLE = {
+  background: '#fff',
+  border: '1px solid #E6EAF1',
+  borderRadius: 22,
+  boxShadow: '0 1px 2px rgba(11,19,32,.04), 0 1px 3px rgba(11,19,32,.04)',
+  padding: 20,
+};
 
 export default function PayoutCard({ payout, month, year, onDone }) {
   const { t } = useI18n();
   const [expanded, setExpanded]     = useState(false);
   const [settleOpen, setSettleOpen] = useState(false);
-  const [payingIdx, setPayingIdx]   = useState(null);
   const [saving, setSaving]         = useState(false);
 
   const pending   = Number(payout.pending   || 0);
   const totalPaid = Number(payout.totalPaid || 0);
+  const earned    = Number(payout.totalEarned || 0);
+  const sharesPct = payout.revenueSharePct ?? payout.revenue_share_pct ?? '';
 
-  // Sort oldest-first so cumulative settlement is FIFO-consistent
   const sortedSessions = useMemo(() =>
     [...(payout.sessions || [])].sort((a, b) =>
       String(a.Session_Date).localeCompare(String(b.Session_Date))
     ),
   [payout.sessions]);
 
-  // Sessions where running cumulative ≤ totalPaid are already settled
-  const sessionStates = useMemo(() => {
-    let cum = 0;
-    return sortedSessions.map((s) => {
-      cum += Number(s.Revenue_Therapist || 0);
-      return { session: s, settled: cum <= totalPaid };
-    });
-  }, [sortedSessions, totalPaid]);
-
-  async function handlePaySession(session, idx) {
-    setPayingIdx(idx);
-    await markPayoutPaid(payout.therapistId, month, year, Number(session.Revenue_Therapist || 0));
-    setPayingIdx(null);
-    toast('Payout recorded');
-    onDone();
-  }
-
   async function handleSettleAll() {
     setSaving(true);
     await markPayoutPaid(payout.therapistId, month, year, pending);
     setSaving(false);
-    toast('Payout settled');
+    toast(t('payouts.settlePayout'));
     onDone();
   }
 
   return (
     <>
-      <Card className={`leen-card ${pending > 0 ? 'border border-warning-200' : ''}`}>
-        <Card.Content className="gap-3 p-4">
-          <div className="flex items-center gap-3">
-            <Initials name={payout.therapistName} />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-default-800 truncate">{payout.therapistName}</p>
-              <p className="text-xs text-default-400">{payout.sessions?.length ?? 0} {t('payouts.sessions')}</p>
-            </div>
-            {pending > 0 && <Chip size="sm" color="warning" variant="flat">{t('payouts.pending')}</Chip>}
+      <div style={CARD_STYLE}>
+        {/* Main row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+
+          {/* Identity */}
+          <div style={{ minWidth: 0, flex: '0 0 auto', width: 200 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#0B1320', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {payout.therapistName}
+            </p>
+            <p style={{ fontSize: 12, color: '#5A6478', margin: '3px 0 0' }}>
+              <span dir="ltr" style={{ unicodeBidi: 'embed', display: 'inline-block' }}>{sortedSessions.length}</span>
+              {' '}{t('payouts.sessions')}
+              {sharesPct !== '' && (
+                <> · {t('payouts.share')} <span dir="ltr" style={{ unicodeBidi: 'embed', display: 'inline-block' }}>{sharesPct}%</span></>
+              )}
+            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className="bg-default-50 rounded-lg px-2 py-1.5">
-              <p className="text-default-400">{t('payouts.totalEarned')}</p>
-              <p dir="ltr" className="font-semibold text-default-800">{fmt(payout.totalEarned)}</p>
+          {/* Stats grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, flex: 1, minWidth: 260 }}>
+            <div>
+              <p style={{ fontSize: 11, color: '#5A6478', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '.03em', fontWeight: 600 }}>
+                {t('payouts.totalEarned')}
+              </p>
+              <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: '#0B1320', margin: 0, unicodeBidi: 'embed' }}>
+                {fmt(earned)}
+              </p>
             </div>
-            <div className="bg-default-50 rounded-lg px-2 py-1.5">
-              <p className="text-default-400">{t('payouts.totalPaid')}</p>
-              <p dir="ltr" className="font-semibold text-success">{fmt(totalPaid)}</p>
+            <div>
+              <p style={{ fontSize: 11, color: '#5A6478', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '.03em', fontWeight: 600 }}>
+                {t('payouts.totalPaid')}
+              </p>
+              <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: '#8089A0', margin: 0, unicodeBidi: 'embed' }}>
+                {fmt(totalPaid)}
+              </p>
             </div>
-            <div className={`rounded-lg px-2 py-1.5 ${pending > 0 ? 'bg-warning-50' : 'bg-default-50'}`}>
-              <p className="text-default-400">{t('payouts.pending')}</p>
-              <p dir="ltr" className={`font-semibold ${pending > 0 ? 'text-warning-700' : 'text-default-800'}`}>{fmt(pending)}</p>
+            <div>
+              <p style={{ fontSize: 11, color: '#5A6478', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '.03em', fontWeight: 600 }}>
+                {t('payouts.pending')}
+              </p>
+              <p dir="ltr" style={{ fontSize: 18, fontWeight: 700, color: pending > 0 ? '#E69013' : '#16A567', margin: 0, unicodeBidi: 'embed' }}>
+                {fmt(pending)}
+              </p>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-between items-center">
-            <Button size="sm" variant="light" onPress={() => setExpanded((v) => !v)}>
-              {expanded ? '▲' : '▼'} {t('payouts.payoutHistory')}
-            </Button>
-            {pending > 0 && (
-              <Button size="sm" color="warning" variant="flat" isDisabled={saving}
-                onPress={() => setSettleOpen(true)}>
-                {t('payouts.settlePayout')}
-              </Button>
+          {/* Actions */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'stretch', flexShrink: 0 }}>
+            {pending > 0 ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setSettleOpen(true)}
+                style={{
+                  background: saving ? '#0A6E51' : '#0E9B73',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 12,
+                  padding: '6px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: saving ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {saving ? <Spinner size="sm" /> : t('payouts.settlePayout')}
+              </button>
+            ) : (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: '#E6F6EE',
+                color: '#0a6e3f',
+                borderRadius: 999,
+                padding: '4px 12px',
+                fontSize: 12,
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}>
+                ✓ {t('payouts.settled')}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#2A3344',
+                borderRadius: 10,
+                padding: '4px 8px',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#EEF1F6'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              {expanded ? t('payouts.hideSessions') : t('payouts.seeSessions')}
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded session table */}
+        {expanded && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #E6EAF1' }}>
+            {sortedSessions.length === 0 ? (
+              <p style={{ fontSize: 12, color: '#8089A0', textAlign: 'center', margin: 0 }}>{t('general.noResults')}</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#FAFBFD', borderBottom: '1px solid #E6EAF1' }}>
+                    {[t('payouts.colDate'), t('payouts.colClient'), t('payouts.colType'), t('payouts.colFee'), t('payouts.colShare')].map((col, i) => (
+                      <th key={i} style={{
+                        padding: '6px 10px',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: '#5A6478',
+                        textTransform: 'uppercase',
+                        letterSpacing: '.04em',
+                        textAlign: i >= 3 ? 'right' : 'left',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedSessions.map((s, i) => (
+                    <tr
+                      key={i}
+                      style={{ borderBottom: i < sortedSessions.length - 1 ? '1px solid #E6EAF1' : 'none' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#F7F8FB'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <td style={{ padding: '10px 10px', color: '#2A3344', whiteSpace: 'nowrap' }}>{s.Session_Date}</td>
+                      <td style={{ padding: '10px 10px', color: '#2A3344' }}>{s.Client_Name || '—'}</td>
+                      <td style={{ padding: '10px 10px', color: '#2A3344' }}>{s.Session_Type}</td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right' }}>
+                        <span dir="ltr" style={{ color: '#0B1320', unicodeBidi: 'embed', display: 'inline-block' }}>{fmt(s.Fee)}</span>
+                      </td>
+                      <td style={{ padding: '10px 10px', textAlign: 'right' }}>
+                        <span dir="ltr" style={{ fontWeight: 600, color: '#0E9B73', unicodeBidi: 'embed', display: 'inline-block' }}>{fmt(s.Revenue_Therapist)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
-
-          {expanded && sortedSessions.length > 0 && (
-            <>
-              <Separator />
-              <ul className="flex flex-col gap-1.5">
-                {sessionStates.map(({ session: s, settled }, i) => (
-                  <li key={i} className="flex justify-between items-center text-xs py-0.5">
-                    <span className="text-default-600">
-                      {s.Session_Date} · {s.Session_Type}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span dir="ltr" className={`font-medium ${settled ? 'text-success' : 'text-primary'}`}>
-                        {fmt(s.Revenue_Therapist)}
-                      </span>
-                      {settled ? (
-                        <span className="text-success font-bold text-xs w-10 text-center">✓ Paid</span>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={payingIdx !== null}
-                          onClick={() => handlePaySession(s, i)}
-                          style={{
-                            width: '40px', fontSize: '11px', padding: '3px 0',
-                            borderRadius: '5px', border: 'none',
-                            background: payingIdx === i ? '#f59e0b' : '#d97706',
-                            color: '#fff', cursor: payingIdx !== null ? 'not-allowed' : 'pointer',
-                            opacity: payingIdx !== null && payingIdx !== i ? 0.5 : 1,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}
-                        >
-                          {payingIdx === i
-                            ? <Spinner size="sm" color="white" />
-                            : 'Pay'}
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </Card.Content>
-      </Card>
+        )}
+      </div>
 
       <ConfirmModal
         isOpen={settleOpen}
