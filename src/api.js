@@ -259,5 +259,5 @@ export async function updateSettings(settings) {
 }
 
 export async function saveExpenseCategories(rows) {
-  return updateSettings({ EXPENSE_CATEGORIES: JSON.stringify(rows) });
+  return post('saveExpenseCategories', { rows });
 }

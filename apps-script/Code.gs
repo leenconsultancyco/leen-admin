@@ -25,8 +25,6 @@ function sheetToObjects(sheet) {
     headers.forEach((h, i) => {
       let val = row[i];
       if (val instanceof Date) {
-        // Google Sheets stores time-only values with the 1899-12-30 epoch date.
-        // Detect by year and format as HH:mm instead of a date string.
         val = val.getFullYear() === 1899
           ? Utilities.formatDate(val, TZ, 'HH:mm')
           : Utilities.formatDate(val, TZ, 'yyyy-MM-dd');
@@ -111,16 +109,16 @@ function doGet(e) {
 
   try {
     switch (action) {
-      case 'ping':             return cors({ pong: true });
-      case 'getTherapists':    return ok(getTherapists_());
-      case 'getAvailableSlots':return ok(getAvailableSlots_(p.therapistId, p.date));
-      case 'getDashboardData': return ok(getDashboardData_(month, year));
-      case 'getSessions':      return ok(getSessions_(month, year, p.therapistId, p.status));
-      case 'getTransactions':  return ok(getTransactions_(month, year));
-      case 'getExpenses':      return ok(getExpenses_(month, year));
-      case 'getPayouts':       return ok(getPayouts_(month, year));
-      case 'getClients':       return ok(sheetToObjects(getSheet('Clients')));
-      case 'getTherapistsFull':return ok(sheetToObjects(getSheet('Therapists')));
+      case 'ping':                 return cors({ pong: true });
+      case 'getTherapists':        return ok(getTherapists_());
+      case 'getAvailableSlots':    return ok(getAvailableSlots_(p.therapistId, p.date));
+      case 'getDashboardData':     return ok(getDashboardData_(month, year));
+      case 'getSessions':          return ok(getSessions_(month, year, p.therapistId, p.status));
+      case 'getTransactions':      return ok(getTransactions_(month, year));
+      case 'getExpenses':          return ok(getExpenses_(month, year));
+      case 'getPayouts':           return ok(getPayouts_(month, year));
+      case 'getClients':           return ok(sheetToObjects(getSheet('Clients')));
+      case 'getTherapistsFull':    return ok(sheetToObjects(getSheet('Therapists')));
       case 'getSettings':          return ok(getSettings_());
       case 'getExpenseCategories': return ok(getExpenseCategories_());
       case 'backup':               return ok(backup_());
@@ -140,26 +138,27 @@ function doPost(e) {
 
   try {
     switch (body.action) {
-      case 'submitBooking':   return ok(submitBooking_(body));
-      case 'confirmBooking':  return ok(confirmBooking_(body.bookingId));
-      case 'cancelBooking':   return ok(cancelBooking_(body.bookingId, body.reason));
-      case 'addTransaction':  return ok(addTransaction_(body));
-      case 'addExpense':      return ok(addExpense_(body));
-      case 'editExpense':     return ok(editExpense_(body));
-      case 'deleteExpense':   return ok(deleteExpense_(body));
-      case 'markPaid':        return ok(markPaid_(body.bookingId, body.paymentMethod));
-      case 'addClient':       return ok(addClient_(body));
-      case 'addTherapist':    return ok(addTherapist_(body));
-      case 'updateTherapist': return ok(updateTherapist_(body));
-      case 'blockDate':       return ok(blockDate_(body));
-      case 'editBooking':     return ok(editBooking_(body));
-      case 'deleteBooking':   return ok(deleteBooking_(body.bookingId));
+      case 'submitBooking':                return ok(submitBooking_(body));
+      case 'confirmBooking':               return ok(confirmBooking_(body.bookingId));
+      case 'cancelBooking':                return ok(cancelBooking_(body.bookingId, body.reason));
+      case 'addTransaction':               return ok(addTransaction_(body));
+      case 'addExpense':                   return ok(addExpense_(body));
+      case 'editExpense':                  return ok(editExpense_(body));
+      case 'deleteExpense':                return ok(deleteExpense_(body));
+      case 'markPaid':                     return ok(markPaid_(body.bookingId, body.paymentMethod));
+      case 'addClient':                    return ok(addClient_(body));
+      case 'addTherapist':                 return ok(addTherapist_(body));
+      case 'updateTherapist':              return ok(updateTherapist_(body));
+      case 'blockDate':                    return ok(blockDate_(body));
+      case 'editBooking':                  return ok(editBooking_(body));
+      case 'deleteBooking':                return ok(deleteBooking_(body.bookingId));
       case 'deleteTransactionByBookingId': return ok(deleteTransactionByBookingId_(body.bookingId));
-      case 'addBookingAdmin': return ok(addBookingAdmin_(body));
-      case 'markPayoutPaid':  return ok(markPayoutPaid_(body));
-      case 'updatePassword':  return ok(updatePassword_(body.newHash));
-      case 'updateSettings':  return ok(updateSettings_(body.settings));
-      case 'verifyLogin':     return ok(verifyLogin_(body.username, body.passwordHash));
+      case 'addBookingAdmin':              return ok(addBookingAdmin_(body));
+      case 'markPayoutPaid':               return ok(markPayoutPaid_(body));
+      case 'updatePassword':               return ok(updatePassword_(body.newHash));
+      case 'updateSettings':               return ok(updateSettings_(body.settings));
+      case 'verifyLogin':                  return ok(verifyLogin_(body.username, body.passwordHash));
+      case 'saveExpenseCategories':        return ok(saveExpenseCategories_(body));
       default: return err('Unknown action: ' + body.action);
     }
   } catch (e) { return err(e.message); }
@@ -198,13 +197,12 @@ function getAvailableSlots_(therapistId, dateStr) {
     cur += duration;
   }
 
-  // Remove blocked slots
   const exceptions = sheetToObjects(getSheet('Availability'))
     .filter(ex => ex.Therapist_ID === therapistId && toDateStr(ex.Date) === dateStr && ex.Type === 'Blocked');
 
   return slots.filter(slot => !exceptions.some(ex => {
-    if (!ex.Time_Start) return true; // full day blocked
-    const slotMin = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
+    if (!ex.Time_Start) return true;
+    const slotMin    = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
     const blockStart = parseInt(ex.Time_Start.split(':')[0]) * 60 + parseInt(ex.Time_Start.split(':')[1]);
     const blockEnd   = parseInt(ex.Time_End.split(':')[0])   * 60 + parseInt(ex.Time_End.split(':')[1]);
     return slotMin >= blockStart && slotMin < blockEnd;
@@ -228,12 +226,12 @@ function getDashboardData_(month, year) {
 
   const todayBookings = allBookings.filter(b => toDateStr(b.Session_Date) === todayStr && b.Status !== 'Cancelled');
 
-  const sessionCount   = monthBookings.length;
-  const totalRevenue   = monthBookings.reduce((s, b) => s + Number(b.Revenue_Center || 0), 0);
-  const pendingCount   = allBookings.filter(b => b.Status === 'Pending').length;
-  const todaySessions  = todayBookings.length;
-  const todayRevenue   = todayBookings.reduce((s, b) => s + Number(b.Revenue_Center || 0), 0);
-  const totalExpenses  = allExpenses
+  const sessionCount  = monthBookings.length;
+  const totalRevenue  = monthBookings.reduce((s, b) => s + Number(b.Revenue_Center || 0), 0);
+  const pendingCount  = allBookings.filter(b => b.Status === 'Pending').length;
+  const todaySessions = todayBookings.length;
+  const todayRevenue  = todayBookings.reduce((s, b) => s + Number(b.Revenue_Center || 0), 0);
+  const totalExpenses = allExpenses
     .filter(e => { const my = monthYear(e.Date); return my.m === month && my.y === year; })
     .reduce((s, e) => s + Number(e.Actual_EGP || 0), 0);
   const overallRevenue  = allBookings.filter(b => b.Status !== 'Cancelled')
@@ -252,7 +250,6 @@ function getDashboardData_(month, year) {
       timeAgo: toDateStr(b.Submitted_At),
     }));
 
-  // Build monthlyChart: last 6 months
   const monthlyChart = [];
   for (let i = 5; i >= 0; i--) {
     let m = month - i, y = year;
@@ -325,19 +322,20 @@ function getExpenses_(month, year) {
 // ---------------------------------------------------------------------------
 
 function getPayouts_(month, year) {
-  const bookings  = getSessions_(month, year, null, null).filter(b => b.Status !== 'Cancelled');
-  const therapists = sheetToObjects(getSheet('Therapists')).filter(t => t.Active);
+  const bookings      = getSessions_(month, year, null, null).filter(b => b.Status !== 'Cancelled');
+  const therapists    = sheetToObjects(getSheet('Therapists')).filter(t => t.Active);
   const payoutHistory = sheetToObjects(getSheet('Payout_History'));
 
   return therapists.map(th => {
-    const sessions = bookings.filter(b => b.Therapist_ID === th.Therapist_ID);
+    const sessions    = bookings.filter(b => b.Therapist_ID === th.Therapist_ID);
     const totalEarned = sessions.reduce((s, b) => s + Number(b.Revenue_Therapist || 0), 0);
     const totalPaid   = payoutHistory
       .filter(p => p.Therapist_ID === th.Therapist_ID && Number(p.Month) === month && Number(p.Year) === year)
       .reduce((s, p) => s + Number(p.Amount || 0), 0);
     return {
-      therapistId:   th.Therapist_ID,
-      therapistName: th.Name_EN,
+      therapistId:     th.Therapist_ID,
+      therapistName:   th.Name_EN,
+      revenueSharePct: Number(th.Revenue_Share_Pct || 70),
       totalEarned,
       totalPaid,
       pending: Math.max(0, totalEarned - totalPaid),
@@ -371,6 +369,12 @@ function getSettings_() {
   return result;
 }
 
+function getSettingValue_(key) {
+  const data = getSheet('Settings').getDataRange().getValues();
+  const row  = data.find(r => r[0] === key);
+  return row ? row[1] : '';
+}
+
 // ---------------------------------------------------------------------------
 // GET — Backup
 // ---------------------------------------------------------------------------
@@ -401,10 +405,9 @@ function submitBooking_(body) {
   const revTh  = Math.round(fee * share);
   const revCt  = fee - revTh;
 
-  const year  = new Date().getFullYear();
+  const year      = new Date().getFullYear();
   const bookingId = nextId('Bookings', 'B', year);
 
-  // Find or create client
   const clients = sheetToObjects(getSheet('Clients'));
   let client    = clients.find(c => c.Phone === body.clientPhone);
   if (!client) {
@@ -481,7 +484,7 @@ function addTransaction_(body) {
   const id   = nextId('Transactions', 'TXN', year);
   getSheet('Transactions').appendRow([
     id, body.date, body.description, body.category, body.subCategory || '',
-    body.cashIn || '', body.cashOut || '', '', // Balance column left blank
+    body.cashIn || '', body.cashOut || '', '',
     body.method || 'Cash', body.bookingId || '', body.idempotencyKey, body.notes || '', now_()
   ]);
   return { transactionId: id };
@@ -555,10 +558,9 @@ function deleteExpense_(body) {
     if (data[i][idCol] === body.expenseId) {
       const expenseIKey = iKeyCol >= 0 ? data[i][iKeyCol] : null;
       sheet.deleteRow(i + 1);
-      // Also delete the linked transaction created when this expense was added
       if (expenseIKey) {
-        const txnSheet  = getSheet('Transactions');
-        const txnData   = txnSheet.getDataRange().getValues();
+        const txnSheet   = getSheet('Transactions');
+        const txnData    = txnSheet.getDataRange().getValues();
         const txnHeaders = txnData[0];
         const txnIKeyCol = txnHeaders.indexOf('Idempotency_Key');
         const linkedKey  = 'txn-exp-' + expenseIKey;
@@ -576,29 +578,39 @@ function deleteExpense_(body) {
 }
 
 // ---------------------------------------------------------------------------
-// POST — Add Client (manual entry — no booking required)
+// POST — Save Expense Categories (replaces all rows in Expense_Categories tab)
+// ---------------------------------------------------------------------------
+
+function saveExpenseCategories_(body) {
+  const sheet = getSheet('Expense_Categories');
+  if (!sheet) throw new Error('Expense_Categories sheet not found');
+  const rows = body.rows || [];
+  if (sheet.getLastRow() > 1) sheet.deleteRows(2, sheet.getLastRow() - 1);
+  rows.forEach(r => sheet.appendRow([r.Category || '', r.Subcategory || '']));
+  return { saved: rows.length };
+}
+
+// ---------------------------------------------------------------------------
+// POST — Add Client (manual entry)
 // ---------------------------------------------------------------------------
 
 function addClient_(body) {
   const sheet   = getSheet('Clients');
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-  // Generate next C-NNN id
   const existing = sheet.getLastRow() < 2 ? [] :
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat()
       .filter(v => String(v).startsWith('C-'))
       .map(v => parseInt(String(v).slice(2)) || 0);
   const id = 'C-' + String((existing.length ? Math.max(...existing) : 0) + 1).padStart(3, '0');
-
   const row = headers.map(h => {
-    if (h === 'Client_ID')     return id;
-    if (h === 'Name')          return body.name || '';
-    if (h === 'Phone')         return body.phone || '';
-    if (h === 'Email')         return body.email || '';
-    if (h === 'Status')        return body.status || 'Active';
-    if (h === 'Notes')         return body.notes || '';
-    if (h === 'Total_Sessions')return 0;
-    if (h === 'Added_At')      return now_();
+    if (h === 'Client_ID')      return id;
+    if (h === 'Name')           return body.name || '';
+    if (h === 'Phone')          return body.phone || '';
+    if (h === 'Email')          return body.email || '';
+    if (h === 'Status')         return body.status || 'Active';
+    if (h === 'Notes')          return body.notes || '';
+    if (h === 'Total_Sessions') return 0;
+    if (h === 'Added_At')       return now_();
     return '';
   });
   sheet.appendRow(row);
@@ -612,14 +624,11 @@ function addClient_(body) {
 function addTherapist_(body) {
   const sheet   = getSheet('Therapists');
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-
-  // Generate next T-NNN id
   const existing = sheet.getLastRow() < 2 ? [] :
     sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().flat()
       .filter(v => String(v).startsWith('T-'))
       .map(v => parseInt(String(v).slice(2)) || 0);
   const id = 'T-' + String((existing.length ? Math.max(...existing) : 0) + 1).padStart(3, '0');
-
   const row = headers.map(h => {
     if (h === 'Therapist_ID') return id;
     if (h === 'Joined_Date')  return today_();
@@ -664,19 +673,18 @@ function editBooking_(body) {
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][idCol] === body.Booking_ID) {
-      // Therapist/session-type change — recalculate fees
-      const oldTherapistId  = data[i][headers.indexOf('Therapist_ID')];
-      const newTherapistId  = body.Therapist_ID || oldTherapistId;
-      const oldSessionType  = data[i][headers.indexOf('Session_Type')];
-      const newSessionType  = body.Session_Type || oldSessionType;
+      const oldTherapistId = data[i][headers.indexOf('Therapist_ID')];
+      const newTherapistId = body.Therapist_ID || oldTherapistId;
+      const oldSessionType = data[i][headers.indexOf('Session_Type')];
+      const newSessionType = body.Session_Type || oldSessionType;
 
       if (newTherapistId !== oldTherapistId || newSessionType !== oldSessionType) {
         const th = sheetToObjects(getSheet('Therapists')).find(t => t.Therapist_ID === newTherapistId);
         if (th) {
-          const fee    = Number(th['Fee_' + newSessionType] || th.Fee_Individual || 0);
-          const share  = Number(th.Revenue_Share_Pct || 70) / 100;
-          const revTh  = Math.round(fee * share);
-          const revCt  = fee - revTh;
+          const fee   = Number(th['Fee_' + newSessionType] || th.Fee_Individual || 0);
+          const share = Number(th.Revenue_Share_Pct || 70) / 100;
+          const revTh = Math.round(fee * share);
+          const revCt = fee - revTh;
           const feeMap = { Therapist_ID: th.Therapist_ID, Therapist_Name: th.Name_EN,
                            Fee: fee, Revenue_Therapist: revTh, Revenue_Center: revCt };
           Object.entries(feeMap).forEach(([col, val]) => {
@@ -686,7 +694,6 @@ function editBooking_(body) {
         }
       }
 
-      // Update standard editable fields
       ['Client_Name','Client_Phone','Client_Email',
        'Session_Date','Session_Time','Session_Type','Session_Mode','Video_Link',
        'Status','Payment_Status','Payment_Method','Notes'].forEach(col => {
@@ -722,8 +729,6 @@ function deleteBooking_(bookingId) {
 
 // ---------------------------------------------------------------------------
 // POST — Delete Transaction by Booking ID
-// Removes the Cash Flow entry auto-created when a session was marked paid.
-// Scans bottom-up so row deletions don't shift unvisited indices.
 // ---------------------------------------------------------------------------
 
 function deleteTransactionByBookingId_(bookingId) {
@@ -744,7 +749,7 @@ function deleteTransactionByBookingId_(bookingId) {
 }
 
 // ---------------------------------------------------------------------------
-// POST — Add Booking (admin — bypasses client booking flow)
+// POST — Add Booking (admin)
 // ---------------------------------------------------------------------------
 
 function addBookingAdmin_(body) {
@@ -874,12 +879,6 @@ function verifyLogin_(username, passwordHash) {
 // Email helpers
 // ---------------------------------------------------------------------------
 
-function getSettingValue_(key) {
-  const data = getSheet('Settings').getDataRange().getValues();
-  const row  = data.find(r => r[0] === key);
-  return row ? row[1] : '';
-}
-
 function emailAdmin_(bookingId, body, therapist) {
   const adminEmail = getSettingValue_('ADMIN_EMAIL');
   if (!adminEmail) return;
@@ -905,18 +904,16 @@ function emailClient_(type, booking) {
 // ---------------------------------------------------------------------------
 // Daily reminder trigger
 // Run createDailyReminderTrigger() ONCE manually from the Apps Script editor.
-// It creates a time-based trigger that runs sendDailyReminders() every morning.
 // ---------------------------------------------------------------------------
 
 function createDailyReminderTrigger() {
-  // Delete any existing trigger for this function first (prevents duplicates)
   ScriptApp.getProjectTriggers()
     .filter(t => t.getHandlerFunction() === 'sendDailyReminders')
     .forEach(t => ScriptApp.deleteTrigger(t));
 
   ScriptApp.newTrigger('sendDailyReminders')
     .timeBased()
-    .atHour(9)        // 9 AM Cairo time
+    .atHour(9)
     .everyDays(1)
     .inTimezone(TZ)
     .create();
