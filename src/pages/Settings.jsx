@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Spinner } from '@heroui/react';
-import { updatePassword, updateSettings } from '../api';
+import { updatePassword, updateSettings, getExpenseCategories, saveExpenseCategories, backup } from '../api';
 import { hashPassword, getAdminUsername } from '../auth';
 import { useI18n } from '../i18n';
 import LanguageToggle from '../components/LanguageToggle';
 import ThemeSelector from '../components/ThemeSelector';
-import { backup } from '../api';
 import { downloadJSON } from '../utils';
 
 const BACKUP_KEY    = 'leen_last_backup';
@@ -26,6 +25,15 @@ const LBL = {
   color: '#0E9B73', textTransform: 'uppercase',
   letterSpacing: '.04em', marginBottom: 6,
 };
+const btnPrimary = {
+  background: '#0E9B73', color: '#fff', border: 'none', borderRadius: 10,
+  fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+};
+const btnGhost = {
+  background: 'transparent', color: '#2A3344', border: '1px solid #DCE1EA', borderRadius: 10,
+  fontWeight: 500, cursor: 'pointer',
+};
+
 function Field({ label, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -91,12 +99,14 @@ function IconHome()      { return <svg width="16" height="16" viewBox="0 0 24 24
 function IconTheme()     { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>; }
 function IconBackup()    { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>; }
 function IconDownload()  { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>; }
+function IconCategories(){ return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>; }
 
 const NAV_ITEMS = [
-  { id: 'security',   labelKey: 'security',   Icon: IconShield },
-  { id: 'centerInfo', labelKey: 'centerInfo',  Icon: IconHome   },
-  { id: 'theme',      labelKey: 'theme',       Icon: IconTheme  },
-  { id: 'backup',     labelKey: 'backup',      Icon: IconBackup },
+  { id: 'security',    Icon: IconShield     },
+  { id: 'centerInfo',  Icon: IconHome       },
+  { id: 'theme',       Icon: IconTheme      },
+  { id: 'categories',  Icon: IconCategories },
+  { id: 'backup',      Icon: IconBackup     },
 ];
 
 // ── Panels ────────────────────────────────────────────────────────────────────
@@ -263,6 +273,206 @@ function ThemePanel({ t }) {
   );
 }
 
+const DEFAULT_CATS = ['Cleaning','Coffee & Break','Facilities','Marketing','Salary','Initial Cost','Other'];
+
+function CategoriesPanel({ t, lang }) {
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [newCat, setNewCat]     = useState('');
+  const [addingCat, setAddingCat] = useState(false);
+  const [newSubs, setNewSubs]   = useState({});   // { [category]: string }
+  const [addingSub, setAddingSub] = useState({}); // { [category]: bool }
+
+  useEffect(() => {
+    setLoading(true);
+    getExpenseCategories().then((r) => {
+      if (r.success && Array.isArray(r.data) && r.data.length > 0) {
+        setRows(r.data);
+      } else {
+        // seed with defaults on first use
+        const defaults = DEFAULT_CATS.map((c) => ({ Category: c, Subcategory: '' }));
+        setRows(defaults);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  // Grouped: { [cat]: string[] }
+  const grouped = useMemo(() => {
+    const map = {};
+    rows.forEach(({ Category, Subcategory }) => {
+      if (!Category) return;
+      if (!map[Category]) map[Category] = [];
+      if (Subcategory) map[Category].push(Subcategory);
+    });
+    return map;
+  }, [rows]);
+
+  function toRows(g) {
+    return Object.entries(g).flatMap(([cat, subs]) =>
+      subs.length > 0
+        ? subs.map((sub) => ({ Category: cat, Subcategory: sub }))
+        : [{ Category: cat, Subcategory: '' }]
+    );
+  }
+
+  async function persist(newGrouped) {
+    setSaving(true);
+    const flat = toRows(newGrouped);
+    setRows(flat);
+    await saveExpenseCategories(flat);
+    setSaving(false);
+  }
+
+  function addCategory() {
+    const name = newCat.trim();
+    if (!name || grouped[name]) return;
+    const g = { ...grouped, [name]: [] };
+    setNewCat('');
+    setAddingCat(false);
+    persist(g);
+  }
+
+  function deleteCategory(cat) {
+    if (!window.confirm(t('settings.deleteCategoryConfirm'))) return;
+    const g = { ...grouped };
+    delete g[cat];
+    persist(g);
+  }
+
+  function addSub(cat) {
+    const sub = (newSubs[cat] || '').trim();
+    if (!sub || (grouped[cat] || []).includes(sub)) return;
+    const g = { ...grouped, [cat]: [...(grouped[cat] || []), sub] };
+    setNewSubs((s) => ({ ...s, [cat]: '' }));
+    setAddingSub((s) => ({ ...s, [cat]: false }));
+    persist(g);
+  }
+
+  function deleteSub(cat, sub) {
+    const g = { ...grouped, [cat]: grouped[cat].filter((s) => s !== sub) };
+    persist(g);
+  }
+
+  const cats = Object.keys(grouped);
+
+  return (
+    <div>
+      <p style={{ fontSize: 18, fontWeight: 700, color: '#0B1320', margin: '0 0 6px' }}>
+        {t('settings.categories')}
+      </p>
+      <p style={{ fontSize: 13, color: '#5A6478', margin: '0 0 20px' }}>
+        {t('settings.categoriesDesc')}
+      </p>
+
+      {/* Add category row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        {addingCat ? (
+          <>
+            <input
+              autoFocus
+              value={newCat}
+              onChange={(e) => setNewCat(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addCategory(); if (e.key === 'Escape') setAddingCat(false); }}
+              placeholder={t('settings.categoryPlaceholder')}
+              style={{ ...INP, flex: 1, maxWidth: 220 }}
+            />
+            <button type="button" onClick={addCategory}
+              style={{ ...btnPrimary, padding: '8px 14px', fontSize: 13 }}>
+              {t('general.save')}
+            </button>
+            <button type="button" onClick={() => { setAddingCat(false); setNewCat(''); }}
+              style={{ ...btnGhost, padding: '8px 10px', fontSize: 13 }}>
+              {t('general.cancel')}
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={() => setAddingCat(true)}
+            style={{ ...btnPrimary, padding: '8px 16px', fontSize: 13 }}>
+            + {t('settings.addCategory')}
+          </button>
+        )}
+        {saving && <Spinner size="sm" />}
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#8089A0', fontSize: 13 }}>
+          <Spinner size="sm" /> Loading…
+        </div>
+      ) : cats.length === 0 ? (
+        <p style={{ fontSize: 13, color: '#8089A0' }}>{t('settings.noCategories')}</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {cats.map((cat) => (
+            <div key={cat} style={{
+              border: '1px solid #E6EAF1', borderRadius: 12, padding: '12px 14px',
+            }}>
+              {/* Category header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: grouped[cat].length > 0 || addingSub[cat] ? 10 : 0 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#0B1320' }}>{cat}</span>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  {!addingSub[cat] && (
+                    <button type="button"
+                      onClick={() => setAddingSub((s) => ({ ...s, [cat]: true }))}
+                      style={{ fontSize: 12, color: '#0E9B73', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 4px' }}>
+                      + {t('settings.addSubCategory')}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => deleteCategory(cat)}
+                    style={{ fontSize: 13, color: '#DC3A4D', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', lineHeight: 1 }}
+                    title="Delete category">
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-categories */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {grouped[cat].map((sub) => (
+                  <span key={sub} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    background: '#F7F8FB', border: '1px solid #DCE1EA',
+                    borderRadius: 8, padding: '3px 10px', fontSize: 12, color: '#2A3344',
+                  }}>
+                    {sub}
+                    <button type="button" onClick={() => deleteSub(cat, sub)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8089A0', fontSize: 14, lineHeight: 1, padding: 0 }}>
+                      ×
+                    </button>
+                  </span>
+                ))}
+
+                {/* Inline add sub-category input */}
+                {addingSub[cat] && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      autoFocus
+                      value={newSubs[cat] || ''}
+                      onChange={(e) => setNewSubs((s) => ({ ...s, [cat]: e.target.value }))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') addSub(cat); if (e.key === 'Escape') setAddingSub((s) => ({ ...s, [cat]: false })); }}
+                      placeholder={t('settings.subCategoryPlaceholder')}
+                      style={{ ...INP, width: 150, padding: '3px 8px', fontSize: 12, borderRadius: 8 }}
+                    />
+                    <button type="button" onClick={() => addSub(cat)}
+                      style={{ fontSize: 12, color: '#0E9B73', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>
+                      ✓
+                    </button>
+                    <button type="button" onClick={() => setAddingSub((s) => ({ ...s, [cat]: false }))}
+                      style={{ fontSize: 14, color: '#8089A0', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BackupPanel({ t, lang, lastBackup, onBackupDone }) {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice]   = useState(null);
@@ -370,11 +580,12 @@ export default function Settings() {
     security:   lang === 'ar' ? 'الأمان'         : 'Security',
     centerInfo: lang === 'ar' ? 'معلومات المركز' : 'Center info',
     theme:      lang === 'ar' ? 'المظهر'         : 'Theme',
+    categories: lang === 'ar' ? 'الفئات'         : 'Categories',
     backup:     lang === 'ar' ? 'النسخ الاحتياطي': 'Backup',
   };
 
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
 
       {/* Left nav */}
       <div className="leen-card" style={{
@@ -413,10 +624,11 @@ export default function Settings() {
         flex: 1, minWidth: 0, background: '#fff',
         border: '1px solid #E6EAF1', borderRadius: 16, padding: 28,
       }}>
-        {section === 'security'   && <SecurityPanel   t={t} lang={lang} />}
-        {section === 'centerInfo' && <CenterInfoPanel t={t} />}
-        {section === 'theme'      && <ThemePanel      t={t} />}
-        {section === 'backup'     && (
+        {section === 'security'    && <SecurityPanel    t={t} lang={lang} />}
+        {section === 'centerInfo'  && <CenterInfoPanel  t={t} />}
+        {section === 'theme'       && <ThemePanel       t={t} />}
+        {section === 'categories'  && <CategoriesPanel  t={t} lang={lang} />}
+        {section === 'backup'      && (
           <BackupPanel
             t={t} lang={lang}
             lastBackup={lastBackup}

@@ -257,3 +257,7 @@ export async function updatePassword(newHash) {
 export async function updateSettings(settings) {
   return post('updateSettings', { settings });
 }
+
+export async function saveExpenseCategories(rows) {
+  return updateSettings({ EXPENSE_CATEGORIES: JSON.stringify(rows) });
+}
