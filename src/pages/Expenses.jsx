@@ -155,7 +155,7 @@ export default function Expenses() {
           </div>
           <div>
             <p style={{ fontSize: 11, color: '#5A6478', margin: 0 }}>
-              {t('expenses.actual')} · {MONTH_NAMES[Number(month) - 1]}
+              {t('nav.expenses')} · {MONTH_NAMES[Number(month) - 1]}
             </p>
             <p dir="ltr" style={{ fontSize: 20, fontWeight: 800, color: '#0B1320', margin: 0 }}>
               {fmt(totalSpent)}
