@@ -272,6 +272,7 @@ export default function Sessions() {
             sessions={sessions}
             therapistId={therapistId}
             therapists={therapists}
+            clients={clients}
             month={Number(month)}
             year={Number(year)}
             onBookingSuccess={handleCalendarBookingSuccess}

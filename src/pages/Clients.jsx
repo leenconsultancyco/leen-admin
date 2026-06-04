@@ -89,7 +89,12 @@ export default function Clients() {
       />
 
       {selected && (
-        <ClientDetailModal client={selected} isOpen={!!selected} onClose={() => setSelected(null)} />
+        <ClientDetailModal
+          client={selected}
+          isOpen={!!selected}
+          onClose={() => setSelected(null)}
+          onSuccess={() => { setSelected(null); load(); }}
+        />
       )}
       <AddClientModal
         isOpen={adding}

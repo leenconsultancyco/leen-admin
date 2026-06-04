@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button, Chip, Separator, Modal, Spinner } from '@heroui/react';
 import { useI18n } from '../i18n';
+import { updateClient } from '../api';
 import DataTable from './DataTable';
 
 const SESSION_COLS = [
@@ -12,22 +13,66 @@ const SESSION_COLS = [
   { key: 'Status',         label: 'Status', render: (r) => <Chip size="sm" variant="flat">{r.Status}</Chip> },
 ];
 
-export default function ClientDetailModal({ client, isOpen, onClose }) {
+const INP = {
+  display: 'block', width: '100%',
+  border: '1.5px solid #d1d5db', borderRadius: 8,
+  padding: '7px 12px', fontSize: 14,
+  backgroundColor: '#fff', color: '#111827',
+  outline: 'none', boxSizing: 'border-box',
+};
+const LBL = { display: 'block', fontSize: 11, color: '#6b7280', marginBottom: 3 };
+
+function EditField({ label, children }) {
+  return (
+    <div>
+      <label style={LBL}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+export default function ClientDetailModal({ client, isOpen, onClose, onSuccess }) {
   const { t } = useI18n();
-  const [notes, setNotes]   = useState(client.Notes || '');
+  const [form, setForm]     = useState({});
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved]   = useState(false);
+  const [error, setError]   = useState('');
 
-  useEffect(() => { setNotes(client.Notes || ''); setSaved(false); }, [client, isOpen]);
+  useEffect(() => {
+    setForm({
+      name:   client.Name   || '',
+      phone:  client.Phone  || '',
+      email:  client.Email  || '',
+      status: client.Status || 'Active',
+      notes:  client.Notes  || '',
+    });
+    setError('');
+  }, [client, isOpen]);
 
-  async function handleSaveNotes() {
+  function set(key, val) { setForm((f) => ({ ...f, [key]: val })); }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setError('Name is required'); return; }
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 300));
-    client.Notes = notes;
+    setError('');
+    const res = await updateClient({
+      Client_ID: client.Client_ID,
+      Name:      form.name.trim(),
+      Phone:     form.phone.trim(),
+      Email:     form.email.trim(),
+      Status:    form.status,
+      Notes:     form.notes,
+    });
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (res.success) { onSuccess?.(); onClose(); }
+    else setError(res.error || 'Failed to save. Please try again.');
   }
+
+  const isDirty =
+    form.name   !== (client.Name   || '') ||
+    form.phone  !== (client.Phone  || '') ||
+    form.email  !== (client.Email  || '') ||
+    form.status !== (client.Status || 'Active') ||
+    form.notes  !== (client.Notes  || '');
 
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -41,18 +86,36 @@ export default function ClientDetailModal({ client, isOpen, onClose }) {
               </Chip>
             </div>
           </Modal.Header>
-          <Modal.Body className="flex flex-col gap-4 pb-6">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+
+          <Modal.Body className="flex flex-col gap-4 pb-4">
+            {/* Editable info fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
+              <EditField label={t('clients.name') + ' *'}>
+                <input value={form.name} onChange={(e) => set('name', e.target.value)} style={INP} />
+              </EditField>
+              <EditField label={t('clients.phone')}>
+                <input value={form.phone} onChange={(e) => set('phone', e.target.value)} style={INP} />
+              </EditField>
+              <EditField label={t('clients.email')}>
+                <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} style={INP} />
+              </EditField>
+              <EditField label={t('clients.status')}>
+                <select value={form.status} onChange={(e) => set('status', e.target.value)} style={INP}>
+                  <option value="Active">{t('clients.active')}</option>
+                  <option value="Inactive">{t('clients.inactive')}</option>
+                </select>
+              </EditField>
+            </div>
+
+            {/* Read-only info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px' }}>
               {[
-                [t('clients.phone'),              client.Phone],
-                [t('clients.email'),              client.Email || '—'],
-                [t('clients.firstSession'),       client.First_Session_Date || '—'],
-                [t('clients.totalSessions'),      client.Total_Sessions ?? 0],
-                [t('clients.preferredTherapist'), client.Preferred_Therapist_ID || '—'],
+                [t('clients.firstSession'),  String(client.First_Session_Date || '—').substring(0, 10)],
+                [t('clients.totalSessions'), client.Total_Sessions ?? 0],
               ].map(([label, val]) => (
                 <div key={label}>
-                  <p className="text-default-400 text-xs">{label}</p>
-                  <p className="text-default-800 font-medium">{val}</p>
+                  <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 2px' }}>{label}</p>
+                  <p style={{ fontSize: 14, color: '#374151', fontWeight: 500, margin: 0 }}>{val}</p>
                 </div>
               ))}
             </div>
@@ -66,28 +129,28 @@ export default function ClientDetailModal({ client, isOpen, onClose }) {
 
             <Separator />
 
-            <div>
-              <p className="text-sm font-semibold text-default-700 mb-2">{t('clients.notes')}</p>
+            <EditField label={t('clients.notes')}>
               <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                value={form.notes}
+                onChange={(e) => set('notes', e.target.value)}
                 rows={3}
-                style={{
-                  display: 'block', width: '100%', borderWidth: '2px', borderStyle: 'solid',
-                  borderColor: '#9ca3af', borderRadius: '8px', padding: '10px 16px',
-                  backgroundColor: '#ffffff', color: '#111827', fontSize: '16px',
-                  marginBottom: '8px', boxSizing: 'border-box', resize: 'vertical',
-                }}
+                style={{ ...INP, resize: 'vertical' }}
               />
-              <div className="flex items-center gap-2 mt-2">
-                <Button size="sm" color="primary" isDisabled={saving}
-                  startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
-                  onPress={handleSaveNotes}>
-                  {saved ? '✓ ' + t('general.success') : t('general.save')}
-                </Button>
-              </div>
-            </div>
+            </EditField>
           </Modal.Body>
+
+          <Modal.Footer>
+            {error && <p style={{ color: '#ef4444', fontSize: 13, flex: 1, margin: 0 }}>{error}</p>}
+            <Button variant="flat" onPress={onClose}>{t('general.cancel')}</Button>
+            <Button
+              color="primary"
+              isDisabled={saving || !isDirty}
+              startContent={saving ? <Spinner size="sm" color="white" /> : undefined}
+              onPress={handleSave}
+            >
+              {saving ? 'Saving…' : t('general.save')}
+            </Button>
+          </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>
     </Modal.Backdrop>

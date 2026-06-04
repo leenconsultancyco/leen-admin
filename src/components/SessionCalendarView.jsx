@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Spinner } from '@heroui/react';
 import { getAvailableSlots, addBookingAdmin } from '../api';
 import { useI18n } from '../i18n';
@@ -30,13 +30,75 @@ const INPUT_S = {
   fontSize: '12px', width: '100%', boxSizing: 'border-box', outline: 'none',
 };
 
-export default function SessionCalendarView({ sessions, therapistId, therapists, month, year, onBookingSuccess }) {
+function ClientCombo({ value, onChange, onSelect, clients }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const suggestions = useMemo(() => {
+    if (!Array.isArray(clients)) return [];
+    if (!value.trim()) return clients.slice(0, 15);
+    const q = value.toLowerCase();
+    return clients.filter((c) =>
+      (c.Name || '').toLowerCase().includes(q) || (c.Phone || '').includes(q)
+    ).slice(0, 10);
+  }, [value, clients]);
+
+  useEffect(() => {
+    function outside(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('mousedown', outside);
+    return () => document.removeEventListener('mousedown', outside);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <input
+        placeholder="Search client by name or phone *"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        style={INPUT_S}
+        autoComplete="off"
+      />
+      {open && Array.isArray(clients) && clients.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 99,
+          background: '#fff', border: '1.5px solid #d1d5db', borderTop: 'none',
+          borderRadius: '0 0 6px 6px', maxHeight: 160, overflowY: 'auto',
+          boxShadow: '0 4px 12px rgba(0,0,0,.10)',
+        }}>
+          {suggestions.length === 0 ? (
+            <p style={{ padding: '6px 10px', fontSize: 11, color: '#9ca3af', margin: 0 }}>No clients match</p>
+          ) : suggestions.map((c) => (
+            <button
+              key={c.Client_ID}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onSelect(c); setOpen(false); }}
+              style={{
+                display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left',
+                padding: '5px 10px', background: 'none', border: 'none', cursor: 'pointer',
+                borderBottom: '1px solid #f3f4f6',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#f0fdf4'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+            >
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{c.Name}</span>
+              {c.Phone && <span style={{ fontSize: 10, color: '#6b7280' }}>{c.Phone}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function SessionCalendarView({ sessions, therapistId, therapists, month, year, onBookingSuccess, clients }) {
   const { t, lang } = useI18n();
   const [selectedDay, setSelectedDay]   = useState(null);
   const [slots, setSlots]               = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [clientName, setClientName]     = useState('');
+  const [clientPhone, setClientPhone]   = useState('');
   const [sessionType, setSessionType]   = useState('Individual');
   const [sessionMode, setSessionMode]   = useState('In-person');
   const [saving, setSaving]             = useState(false);
@@ -78,6 +140,7 @@ export default function SessionCalendarView({ sessions, therapistId, therapists,
     if (dow === 5 || dow === 6) return; // Fri + Sat weekend
     setSelectedDay(day);
     setClientName('');
+    setClientPhone('');
     setSessionType('Individual');
     setSessionMode('In-person');
     setSelectedSlot('');
@@ -118,8 +181,8 @@ export default function SessionCalendarView({ sessions, therapistId, therapists,
       Session_Time: selectedSlot,
       Session_Type: sessionType,
       Session_Mode: sessionMode,
-      Client_Name: clientName,
-      Client_Phone: '',
+      Client_Name:  clientName,
+      Client_Phone: clientPhone,
       Status: 'Confirmed',
       Payment_Status: 'Unpaid',
       Payment_Method: 'Cash',
@@ -264,11 +327,11 @@ export default function SessionCalendarView({ sessions, therapistId, therapists,
 
               {/* Mini booking form */}
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <input
-                  placeholder="Client name *"
+                <ClientCombo
                   value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  style={INPUT_S}
+                  onChange={(val) => { setClientName(val); setClientPhone(''); }}
+                  onSelect={(c) => { setClientName(c.Name); setClientPhone(c.Phone || ''); }}
+                  clients={clients}
                 />
                 <select value={sessionType} onChange={(e) => setSessionType(e.target.value)} style={INPUT_S}>
                   {therapistTypes.map((tp) => <option key={tp} value={tp}>{tp}</option>)}

@@ -146,6 +146,10 @@ export async function addClient(clientData) {
   return post('addClient', clientData);
 }
 
+export async function updateClient(clientData) {
+  return post('updateClient', clientData);
+}
+
 // ---------------------------------------------------------------------------
 // GET — Therapists (full admin view, includes inactive)
 // ---------------------------------------------------------------------------
