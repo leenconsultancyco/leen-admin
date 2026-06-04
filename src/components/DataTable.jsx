@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Card, Skeleton, Pagination } from '@heroui/react';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 50;
 
 function MobileCardList({ columns, rows, onRowClick }) {
   const preview = columns.slice(0, 4);
