@@ -67,7 +67,7 @@ export default function Dashboard() {
       {/* ── All 6 KPI cards — single row on desktop ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-[18px]">
         {loading ? (
-          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)
+          Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[110px] rounded-2xl" />)
         ) : (
           <>
             <StatCard icon={CalendarDays} label={t('dashboard.todaySessions')}  sublabel={t('general.today')}               value={d.todaySessions ?? 0}                                                         color="default" />

@@ -1,22 +1,34 @@
-import { Card } from '@heroui/react';
-
-// metrics: [{ label, value, cls? }]
-// cls overrides the value text color (e.g. 'text-success', 'text-danger')
+// metrics: [{ label, value, cls?, icon, iconBg }]
+// Matches the icon mini-card style used in Payouts and Expenses pages.
 export default function KpiCard({ metrics }) {
   return (
-    <div className="flex justify-center">
-      <Card className="leen-card w-full max-w-2xl">
-        <Card.Content>
-          <div className="flex flex-wrap justify-around gap-x-8 gap-y-3 text-center py-1">
-            {metrics.map(({ label, value, cls }) => (
-              <div key={label} className="flex flex-col gap-0.5 min-w-[100px]">
-                <span className="text-xs text-default-400">{label}</span>
-                <span className={`text-base font-semibold ${cls || 'text-default-800'}`} dir="ltr">{value}</span>
-              </div>
-            ))}
+    <div className="flex flex-wrap gap-3">
+      {metrics.map(({ label, value, cls, icon, iconBg }) => (
+        <div key={label} className="leen-card" style={{
+          background: '#fff',
+          border: '1px solid #E6EAF1',
+          borderRadius: 16,
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flex: '1 1 120px',
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: iconBg || '#F0F4FF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            {icon}
           </div>
-        </Card.Content>
-      </Card>
+          <div>
+            <p style={{ fontSize: 11, color: '#5A6478', margin: 0 }}>{label}</p>
+            <p dir="ltr"
+               style={{ fontSize: 20, fontWeight: 800, margin: 0, ...(cls ? {} : { color: '#0B1320' }) }}
+               className={cls}>{value}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

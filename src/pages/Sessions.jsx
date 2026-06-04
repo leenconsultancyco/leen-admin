@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Chip, Card } from '@heroui/react';
+import { Button, Chip } from '@heroui/react';
+import KpiCard from '../components/KpiCard';
 import { getSessions, getTherapistsFull, getClients, deleteBooking, deleteTransactionByBookingId } from '../api';
 import { toast } from '../components/Toast';
 import { buildSessionsExcel } from '../utils/excel';
@@ -95,6 +96,49 @@ export default function Sessions() {
   }), { sessions: 0, revenue: 0, therapist: 0, center: 0 }), [filtered]);
 
   const fmt = (n) => `${Number(n).toLocaleString('en-EG')} EGP`;
+
+  const kpiMetrics = [
+    {
+      label: t('sessions.allSessions'),
+      value: totals.sessions,
+      iconBg: '#E3F2FD',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A6ED8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      ),
+    },
+    {
+      label: t('sessions.fee'),
+      value: fmt(totals.revenue),
+      iconBg: '#E6F6F0',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A6E51" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+        </svg>
+      ),
+    },
+    {
+      label: t('sessions.therapistShare'),
+      value: fmt(totals.therapist),
+      iconBg: '#F3E5F5',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A1B9A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      ),
+    },
+    {
+      label: t('sessions.centerShare'),
+      value: fmt(totals.center),
+      iconBg: '#E8F7F2',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0E9B73" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      ),
+    },
+  ];
 
   async function handleDelete() {
     if (!deletingSession) return;
@@ -217,26 +261,7 @@ export default function Sessions() {
         </div>
       </div>
 
-      {/* Totals — single centered card */}
-      <div className="flex justify-center">
-        <Card className="leen-card w-full max-w-2xl">
-          <Card.Content>
-            <div className="flex flex-wrap justify-around gap-x-8 gap-y-3 text-center py-1">
-              {[
-                [t('sessions.allSessions'),    totals.sessions],
-                [t('sessions.fee'),            fmt(totals.revenue)],
-                [t('sessions.therapistShare'), fmt(totals.therapist)],
-                [t('sessions.centerShare'),    fmt(totals.center)],
-              ].map(([label, val]) => (
-                <div key={label} className="flex flex-col gap-0.5 min-w-[100px]">
-                  <span className="text-xs text-default-400">{label}</span>
-                  <span className="text-base font-semibold text-default-800" dir="ltr">{val}</span>
-                </div>
-              ))}
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
+      <KpiCard metrics={kpiMetrics} />
 
       {view === 'table' ? (
         <DataTable columns={columns} data={filtered} loading={loading} emptyMessage={t('general.noResults')} />

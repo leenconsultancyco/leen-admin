@@ -75,9 +75,37 @@ export default function CashFlow() {
   ];
 
   const kpiMetrics = [
-    { label: t('cashflow.totalIn'),  value: fmtEGP(totals.in),  cls: 'text-success' },
-    { label: t('cashflow.totalOut'), value: fmtEGP(totals.out), cls: 'text-danger'  },
-    { label: t('cashflow.net'),      value: fmtEGP(net),        cls: net >= 0 ? 'text-primary' : 'text-danger' },
+    {
+      label: t('cashflow.totalIn'),
+      value: fmtEGP(totals.in),
+      iconBg: '#E6F6F0',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A6E51" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/>
+        </svg>
+      ),
+    },
+    {
+      label: t('cashflow.totalOut'),
+      value: fmtEGP(totals.out),
+      iconBg: '#FFEBEE',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C62828" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+        </svg>
+      ),
+    },
+    {
+      label: t('cashflow.net'),
+      value: fmtEGP(net),
+      cls: net >= 0 ? 'text-primary' : 'text-danger',
+      iconBg: net >= 0 ? '#E3F2FD' : '#FFEBEE',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={net >= 0 ? '#1A6ED8' : '#C62828'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      ),
+    },
   ];
 
   return (
