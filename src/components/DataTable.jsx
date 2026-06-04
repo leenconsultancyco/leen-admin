@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Card, Skeleton, Pagination } from '@heroui/react';
+import { Card, Skeleton } from '@heroui/react';
 
 const PAGE_SIZE = 50;
 
@@ -119,9 +119,60 @@ export default function DataTable({ columns = [], data = [], loading = false, em
         )}
       </div>
 
-      {sorted.length > PAGE_SIZE && (
-        <div className="flex justify-center">
-          <Pagination total={pageCount} page={page} onChange={setPage} size="sm" />
+      {pageCount > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '5px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: page === 1 ? 'not-allowed' : 'pointer',
+              border: '1px solid #DCE1EA', background: page === 1 ? '#F7F8FB' : '#fff', color: page === 1 ? '#C0C7D4' : '#2A3344',
+            }}
+          >
+            ‹
+          </button>
+
+          {Array.from({ length: pageCount }, (_, i) => i + 1)
+            .filter((n) => n === 1 || n === pageCount || Math.abs(n - page) <= 1)
+            .reduce((acc, n, idx, arr) => {
+              if (idx > 0 && n - arr[idx - 1] > 1) acc.push('…');
+              acc.push(n);
+              return acc;
+            }, [])
+            .map((item, idx) =>
+              item === '…' ? (
+                <span key={`e-${idx}`} style={{ fontSize: 13, color: '#8089A0', padding: '0 2px' }}>…</span>
+              ) : (
+                <button
+                  key={item}
+                  onClick={() => setPage(item)}
+                  style={{
+                    minWidth: 32, padding: '5px 8px', borderRadius: 8, fontSize: 13, fontWeight: item === page ? 700 : 400,
+                    cursor: 'pointer', border: '1px solid',
+                    borderColor: item === page ? '#0E9B73' : '#DCE1EA',
+                    background: item === page ? '#0E9B73' : '#fff',
+                    color: item === page ? '#fff' : '#2A3344',
+                  }}
+                >
+                  {item}
+                </button>
+              )
+            )}
+
+          <button
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={page === pageCount}
+            style={{
+              padding: '5px 12px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: page === pageCount ? 'not-allowed' : 'pointer',
+              border: '1px solid #DCE1EA', background: page === pageCount ? '#F7F8FB' : '#fff', color: page === pageCount ? '#C0C7D4' : '#2A3344',
+            }}
+          >
+            ›
+          </button>
+
+          <span style={{ fontSize: 12, color: '#8089A0', marginLeft: 4 }}>
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, sorted.length)} / {sorted.length}
+          </span>
         </div>
       )}
     </div>
