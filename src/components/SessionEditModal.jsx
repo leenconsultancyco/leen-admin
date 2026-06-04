@@ -181,7 +181,7 @@ function ClientAutocomplete({ value, onChange, onSelect, clients }) {
     const q = value.toLowerCase();
     return clients.filter((c) =>
       (c.Name || '').toLowerCase().includes(q) ||
-      (c.Phone || '').includes(q)
+      String(c.Phone || '').includes(q)
     ).slice(0, 10);
   }, [value, clients]);
 
@@ -229,7 +229,7 @@ function ClientAutocomplete({ value, onChange, onSelect, clients }) {
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
               >
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{c.Name}</span>
-                {c.Phone && <span style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{c.Phone}</span>}
+                {c.Phone && <span style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{String(c.Phone)}</span>}
               </button>
             ))
           )}

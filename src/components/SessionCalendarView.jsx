@@ -39,7 +39,7 @@ function ClientCombo({ value, onChange, onSelect, clients }) {
     if (!value.trim()) return clients.slice(0, 15);
     const q = value.toLowerCase();
     return clients.filter((c) =>
-      (c.Name || '').toLowerCase().includes(q) || (c.Phone || '').includes(q)
+      (c.Name || '').toLowerCase().includes(q) || String(c.Phone || '').includes(q)
     ).slice(0, 10);
   }, [value, clients]);
 
@@ -82,7 +82,7 @@ function ClientCombo({ value, onChange, onSelect, clients }) {
               onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
             >
               <span style={{ fontSize: 12, fontWeight: 600, color: '#111827' }}>{c.Name}</span>
-              {c.Phone && <span style={{ fontSize: 10, color: '#6b7280' }}>{c.Phone}</span>}
+              {c.Phone && <span style={{ fontSize: 10, color: '#6b7280' }}>{String(c.Phone)}</span>}
             </button>
           ))}
         </div>
