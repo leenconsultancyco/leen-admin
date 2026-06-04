@@ -39,11 +39,11 @@ export default function ClientDetailModal({ client, isOpen, onClose, onSuccess }
 
   useEffect(() => {
     setForm({
-      name:   client.Name   || '',
-      phone:  client.Phone  || '',
-      email:  client.Email  || '',
-      status: client.Status || 'Active',
-      notes:  client.Notes  || '',
+      name:   client.Name          || '',
+      phone:  String(client.Phone  || ''),
+      email:  client.Email         || '',
+      status: client.Status        || 'Active',
+      notes:  client.Notes         || '',
     });
     setError('');
   }, [client, isOpen]);
@@ -54,25 +54,30 @@ export default function ClientDetailModal({ client, isOpen, onClose, onSuccess }
     if (!form.name.trim()) { setError('Name is required'); return; }
     setSaving(true);
     setError('');
-    const res = await updateClient({
-      Client_ID: client.Client_ID,
-      Name:      form.name.trim(),
-      Phone:     form.phone.trim(),
-      Email:     form.email.trim(),
-      Status:    form.status,
-      Notes:     form.notes,
-    });
-    setSaving(false);
-    if (res.success) { onSuccess?.(); onClose(); }
-    else setError(res.error || 'Failed to save. Please try again.');
+    try {
+      const res = await updateClient({
+        Client_ID: client.Client_ID,
+        Name:      form.name.trim(),
+        Phone:     String(form.phone).trim(),
+        Email:     form.email.trim(),
+        Status:    form.status,
+        Notes:     form.notes,
+      });
+      if (res.success) { onSuccess?.(); onClose(); }
+      else setError(res.error || 'Failed to save. Please try again.');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const isDirty =
-    form.name   !== (client.Name   || '') ||
-    form.phone  !== (client.Phone  || '') ||
-    form.email  !== (client.Email  || '') ||
-    form.status !== (client.Status || 'Active') ||
-    form.notes  !== (client.Notes  || '');
+    form.name   !== (client.Name          || '') ||
+    form.phone  !== String(client.Phone   || '') ||
+    form.email  !== (client.Email         || '') ||
+    form.status !== (client.Status        || 'Active') ||
+    form.notes  !== (client.Notes         || '');
 
   return (
     <Modal.Backdrop isOpen={isOpen} onOpenChange={(open) => !open && onClose()}>

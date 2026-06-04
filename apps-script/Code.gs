@@ -623,28 +623,33 @@ function addClient_(body) {
 // ---------------------------------------------------------------------------
 
 function updateClient_(body) {
-  const { Client_ID, Name, Phone, Email, Status, Notes } = body;
-  if (!Client_ID) throw new Error('Client_ID required');
+  if (!body.Client_ID) throw new Error('Client_ID required');
 
-  const sheet   = getSheet('Clients');
-  const data    = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const idCol   = headers.indexOf('Client_ID');
+  var sheet   = getSheet('Clients');
+  var data    = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idCol   = headers.indexOf('Client_ID');
 
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) === String(Client_ID)) {
-      const rowNum  = i + 1;
-      const updates = { Name: Name, Phone: Phone, Email: Email, Status: Status, Notes: Notes };
-      Object.entries(updates).forEach(function(entry) {
-        var colName = entry[0], val = entry[1];
-        if (val === undefined) return;
-        var col = headers.indexOf(colName);
-        if (col >= 0) sheet.getRange(rowNum, col + 1).setValue(val !== null ? val : '');
-      });
-      return { clientId: Client_ID };
-    }
+  var nameIdx   = headers.indexOf('Name');
+  var phoneIdx  = headers.indexOf('Phone');
+  var emailIdx  = headers.indexOf('Email');
+  var statusIdx = headers.indexOf('Status');
+  var notesIdx  = headers.indexOf('Notes');
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) !== String(body.Client_ID)) continue;
+
+    var row = data[i].slice();
+    if (nameIdx   >= 0 && body.Name   !== undefined) row[nameIdx]   = body.Name   || '';
+    if (phoneIdx  >= 0 && body.Phone  !== undefined) row[phoneIdx]  = body.Phone  || '';
+    if (emailIdx  >= 0 && body.Email  !== undefined) row[emailIdx]  = body.Email  || '';
+    if (statusIdx >= 0 && body.Status !== undefined) row[statusIdx] = body.Status || '';
+    if (notesIdx  >= 0 && body.Notes  !== undefined) row[notesIdx]  = body.Notes  || '';
+
+    sheet.getRange(i + 1, 1, 1, row.length).setValues([row]);
+    return { clientId: body.Client_ID };
   }
-  throw new Error('Client not found');
+  throw new Error('Client not found: ' + body.Client_ID);
 }
 
 // ---------------------------------------------------------------------------
