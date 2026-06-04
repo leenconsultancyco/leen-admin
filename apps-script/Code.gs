@@ -633,16 +633,14 @@ function updateClient_(body) {
 
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][idCol]) === String(Client_ID)) {
-      const row = i + 1;
-      function setCol(colName, val) {
-        const col = headers.indexOf(colName);
-        if (col >= 0 && val !== undefined) sheet.getRange(row, col + 1).setValue(val ?? '');
-      }
-      setCol('Name',   Name);
-      setCol('Phone',  Phone);
-      setCol('Email',  Email);
-      setCol('Status', Status);
-      setCol('Notes',  Notes);
+      const rowNum  = i + 1;
+      const updates = { Name: Name, Phone: Phone, Email: Email, Status: Status, Notes: Notes };
+      Object.entries(updates).forEach(function(entry) {
+        var colName = entry[0], val = entry[1];
+        if (val === undefined) return;
+        var col = headers.indexOf(colName);
+        if (col >= 0) sheet.getRange(rowNum, col + 1).setValue(val !== null ? val : '');
+      });
       return { clientId: Client_ID };
     }
   }
