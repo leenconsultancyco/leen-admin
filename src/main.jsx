@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { I18nProvider } from '@heroui/react';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import { RouterProvider, createHashRouter } from 'react-router-dom';
 import './index.css';
 import { routes } from './App';
 
@@ -14,7 +14,7 @@ document.documentElement.lang = lang;
 const theme = localStorage.getItem('leen_theme') || 'teal';
 document.documentElement.setAttribute('data-theme', theme);
 
-const router = createBrowserRouter(routes, { basename: '/leen-admin/' });
+const router = createHashRouter(routes);
 
 createRoot(document.getElementById('root')).render(
   <I18nProvider locale={lang === 'ar' ? 'ar-EG' : 'en-US'}>

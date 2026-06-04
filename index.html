@@ -1,19 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
   <head>
-    <script>
-      (function() {
-        var query = window.location.search;
-        if (query && query[1] === 'p') {
-          var path = query.slice(3).replace(/&q=(.*)/, '?$1');
-          // path already starts with '/' (e.g. '/sessions') — no trailing slash on base
-          window.history.replaceState(null, null,
-            '/leen-admin' + path + window.location.hash
-          );
-        }
-      })();
-    </script>
-    <meta charset="UTF-8" />
+<meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <meta name="theme-color" content="#0E9B73" />
     <link rel="manifest" href="/leen-admin/manifest.json" />

@@ -14,7 +14,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       manifest: false,
       workbox: {
-        navigateFallback: '/leen-admin/index.html',
+        navigateFallback: null,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
