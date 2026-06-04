@@ -129,19 +129,8 @@ export default function Expenses() {
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
       </PageFilterBar>
 
-      {/* Header row — eyebrow + title left, total expenses mini-card right */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 600, color: '#5A6478', textTransform: 'uppercase', letterSpacing: '.04em', margin: 0 }}>
-            {lang === 'ar'
-              ? `${MONTH_NAMES_AR[Number(month) - 1]} ${year}`
-              : `${MONTH_NAMES[Number(month) - 1].toUpperCase()} ${year}`}
-          </p>
-          <p style={{ fontSize: 18, fontWeight: 700, color: '#0B1320', marginTop: 4, marginBottom: 0 }}>
-            {t('nav.expenses')}
-          </p>
-        </div>
-
+      {/* Total expenses mini-card */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 2 }}>
         <div className="leen-card" style={{
           background: '#fff',
           border: '1px solid #E6EAF1',

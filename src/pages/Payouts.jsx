@@ -70,17 +70,8 @@ export default function Payouts() {
           options={YEARS.map((y) => ({ id: String(y), label: y }))} />
       </PageFilterBar>
 
-      {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <div>
-          <p style={{ fontSize: 11, fontWeight: 600, color: '#5A6478', textTransform: 'uppercase', letterSpacing: '.04em', margin: 0 }}>
-            {monthLabel}
-          </p>
-          <p style={{ fontSize: 18, fontWeight: 700, color: '#0B1320', marginTop: 4, marginBottom: 0 }}>
-            {t('payouts.therapistPayoutsTitle')}
-          </p>
-        </div>
-
+      {/* Center revenue mini-card */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
         <div className="leen-card" style={{
           background: '#fff',
           border: '1px solid #E6EAF1',
