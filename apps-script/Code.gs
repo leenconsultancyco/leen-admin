@@ -147,6 +147,7 @@ function doPost(e) {
       case 'deleteExpense':                return ok(deleteExpense_(body));
       case 'markPaid':                     return ok(markPaid_(body.bookingId, body.paymentMethod));
       case 'addClient':                    return ok(addClient_(body));
+      case 'updateClient':                 return ok(updateClient_(body));
       case 'addTherapist':                 return ok(addTherapist_(body));
       case 'updateTherapist':              return ok(updateTherapist_(body));
       case 'blockDate':                    return ok(blockDate_(body));
@@ -615,6 +616,37 @@ function addClient_(body) {
   });
   sheet.appendRow(row);
   return { clientId: id };
+}
+
+// ---------------------------------------------------------------------------
+// POST — Update Client
+// ---------------------------------------------------------------------------
+
+function updateClient_(body) {
+  const { Client_ID, Name, Phone, Email, Status, Notes } = body;
+  if (!Client_ID) throw new Error('Client_ID required');
+
+  const sheet   = getSheet('Clients');
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idCol   = headers.indexOf('Client_ID');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(Client_ID)) {
+      const row = i + 1;
+      function setCol(colName, val) {
+        const col = headers.indexOf(colName);
+        if (col >= 0 && val !== undefined) sheet.getRange(row, col + 1).setValue(val ?? '');
+      }
+      setCol('Name',   Name);
+      setCol('Phone',  Phone);
+      setCol('Email',  Email);
+      setCol('Status', Status);
+      setCol('Notes',  Notes);
+      return { clientId: Client_ID };
+    }
+  }
+  throw new Error('Client not found');
 }
 
 // ---------------------------------------------------------------------------
