@@ -176,9 +176,13 @@ function ClientAutocomplete({ value, onChange, onSelect, clients }) {
   const ref = useRef(null);
 
   const suggestions = useMemo(() => {
-    if (!value || !Array.isArray(clients)) return [];
+    if (!Array.isArray(clients)) return [];
+    if (!value.trim()) return clients.slice(0, 20);
     const q = value.toLowerCase();
-    return clients.filter((c) => (c.Name || '').toLowerCase().includes(q)).slice(0, 8);
+    return clients.filter((c) =>
+      (c.Name || '').toLowerCase().includes(q) ||
+      (c.Phone || '').includes(q)
+    ).slice(0, 10);
   }, [value, clients]);
 
   useEffect(() => {
@@ -186,6 +190,8 @@ function ClientAutocomplete({ value, onChange, onSelect, clients }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  const hasClients = Array.isArray(clients) && clients.length > 0;
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
@@ -195,31 +201,38 @@ function ClientAutocomplete({ value, onChange, onSelect, clients }) {
         onFocus={() => setOpen(true)}
         style={F}
         autoComplete="off"
+        placeholder="Search by name or phone…"
       />
-      {open && suggestions.length > 0 && (
+      {open && hasClients && (
         <div style={{
           position: 'absolute', top: 'calc(100% - 8px)', left: 0, right: 0, zIndex: 50,
           background: '#fff', border: '2px solid #9ca3af', borderTop: 'none',
-          borderRadius: '0 0 8px 8px', maxHeight: 200, overflowY: 'auto',
+          borderRadius: '0 0 8px 8px', maxHeight: 220, overflowY: 'auto',
           boxShadow: '0 4px 12px rgba(0,0,0,.08)',
         }}>
-          {suggestions.map((c) => (
-            <button
-              key={c.Client_ID}
-              type="button"
-              onMouseDown={(e) => { e.preventDefault(); onSelect(c); setOpen(false); }}
-              style={{
-                display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left',
-                padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: '1px solid #f3f4f6',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#f0fdf4'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
-            >
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{c.Name}</span>
-              {c.Phone && <span style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{c.Phone}</span>}
-            </button>
-          ))}
+          {suggestions.length === 0 ? (
+            <p style={{ padding: '10px 14px', fontSize: 13, color: '#9ca3af', margin: 0 }}>
+              No registered clients match
+            </p>
+          ) : (
+            suggestions.map((c) => (
+              <button
+                key={c.Client_ID}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onSelect(c); setOpen(false); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', width: '100%', textAlign: 'left',
+                  padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                  borderBottom: '1px solid #f3f4f6',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f0fdf4'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+              >
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{c.Name}</span>
+                {c.Phone && <span style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{c.Phone}</span>}
+              </button>
+            ))
+          )}
         </div>
       )}
     </div>

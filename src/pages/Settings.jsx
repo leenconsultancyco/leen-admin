@@ -5,6 +5,7 @@ import { hashPassword, getAdminUsername } from '../auth';
 import { useI18n } from '../i18n';
 import LanguageToggle from '../components/LanguageToggle';
 import ThemeSelector from '../components/ThemeSelector';
+import ConfirmModal from '../components/ConfirmModal';
 import { downloadJSON } from '../utils';
 
 const BACKUP_KEY    = 'leen_last_backup';
@@ -283,6 +284,7 @@ function CategoriesPanel({ t, lang }) {
   const [addingCat, setAddingCat] = useState(false);
   const [newSubs, setNewSubs]   = useState({});   // { [category]: string }
   const [addingSub, setAddingSub] = useState({}); // { [category]: bool }
+  const [deleteSubTarget, setDeleteSubTarget] = useState(null); // { cat, sub }
 
   useEffect(() => {
     setLoading(true);
@@ -351,7 +353,14 @@ function CategoriesPanel({ t, lang }) {
   }
 
   function deleteSub(cat, sub) {
+    setDeleteSubTarget({ cat, sub });
+  }
+
+  function confirmDeleteSub() {
+    if (!deleteSubTarget) return;
+    const { cat, sub } = deleteSubTarget;
     const g = { ...grouped, [cat]: grouped[cat].filter((s) => s !== sub) };
+    setDeleteSubTarget(null);
     persist(g);
   }
 
@@ -395,6 +404,19 @@ function CategoriesPanel({ t, lang }) {
         )}
         {saving && <Spinner size="sm" />}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteSubTarget}
+        onClose={() => setDeleteSubTarget(null)}
+        onConfirm={confirmDeleteSub}
+        title={lang === 'ar' ? 'حذف التصنيف الفرعي' : 'Delete sub-category'}
+        message={deleteSubTarget
+          ? (lang === 'ar'
+              ? `هل أنت متأكد من حذف "${deleteSubTarget.sub}"؟ لا يمكن التراجع عن هذا الإجراء.`
+              : `Are you sure you want to delete "${deleteSubTarget.sub}"? This cannot be undone.`)
+          : ''}
+        confirmColor="danger"
+      />
 
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#8089A0', fontSize: 13 }}>
